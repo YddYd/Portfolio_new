@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gallery</title>
+    <style>
+        :root {
+            --bg: #0b0b0b;
+            --ink: #e6e6e6;
+            --maxw: 1200px;
+            --gap: 16px;
+            --radius: 14px;
+            --shadow: 0 12px 36px rgba(0, 0, 0, .38);
+            --shadow2: 0 18px 48px rgba(0, 0, 0, .5)
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        html,
+        body {
+            height: 100%
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: ui-sans-serif, system-ui, Inter, Roboto, Helvetica, Arial
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none
+        }
+
+        .container {
+            max-width: var(--maxw);
+            margin: 0 auto;
+            padding: 24px 16px 80px
+        }
+
+        header.page {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 12px
+        }
+
+        h1 {
+            margin: 0;
+            font-size: clamp(28px, 3.6vw, 44px);
+            color: #fff;
+            letter-spacing: .3px
+        }
+
+        .btn {
+            padding: 8px 14px;
+            border: 1px solid rgba(255, 255, 255, .22);
+            border-radius: 999px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .02));
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer
+        }
+
+        .back-entry {
+            position: fixed;
+            left: 16px;
+            top: 16px;
+            z-index: 99
+        }
+
+        @media (min-width: 800px) {
+            .back-entry {
+                left: 24px;
+                top: 22px
+            }
+        }
+
+        @media print {
+            .back-entry {
+                display: none
+            }
+        }
+
+        /* Masonry（Pinterest） */
+        .gallery {
+            position: relative;
+            min-height: 200px
+        }
+
+        .item {
+            position: absolute;
+            border-radius: var(--radius);
+            overflow: hidden;
+            background: #101010;
+            border: 1px solid rgba(255, 255, 255, .10);
+            box-shadow: var(--shadow);
+            cursor: zoom-in;
+            transition: box-shadow .25s ease, transform .25s ease
+        }
+
+        .item:hover {
+            box-shadow: var(--shadow2)
+        }
+
+        .item img {
+            display: block;
+            width: 100%;
+            height: auto;
+            background: #000
+        }
+
+        .cap {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 8px 10px;
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, .55) 28%, rgba(0, 0, 0, .78) 100%);
+            color: #fff;
+            font-size: 13px;
+            letter-spacing: .2px;
+            opacity: 0;
+            transform: translateY(4px);
+            transition: .18s ease;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            pointer-events: none
+        }
+
+        .item:hover .cap {
+            opacity: 1;
+            transform: translateY(0)
+        }
+
+        .item.hero img {
+            max-height: min(72vh, 760px)
+        }
+
+        /* Lightbox */
+        .overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 60;
+            display: none
+        }
+
+        .overlay[data-open="1"] {
+            display: block
+        }
+
+        .overlay .backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, .7);
+            opacity: .98
+        }
+
+        .overlay .panel {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: min(92vw, 1280px);
+            height: min(90vh, 860px);
+            display: grid;
+            grid-template-rows: auto 1fr auto
+        }
+
+        .ov-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 10px 12px;
+            color: #fff
+        }
+
+        .ov-title {
+            font-size: 14px;
+            opacity: .9;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis
+        }
+
+        .ov-view {
+            position: relative;
+            background: #000;
+            border: 1px solid rgba(255, 255, 255, .1);
+            border-radius: 12px;
+            overflow: hidden
+        }
+
+        .ov-view img {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #000
+        }
+
+        .ov-prev,
+        .ov-next {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 2;
+            border: 0;
+            background: rgba(0, 0, 0, .35);
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 12px;
+            cursor: pointer
+        }
+
+        .ov-prev {
+            left: 8px
+        }
+
+        .ov-next {
+            right: 8px
+        }
+
+        .ov-footer {
+            color: #ccc;
+            font-size: 12px;
+            opacity: .8;
+            padding: 8px 12px
+        }
+
+        .ov-close {
+            border: 0;
+            background: transparent;
+            color: #fff;
+            font-size: 22px;
+            cursor: pointer;
+            opacity: .9
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 28px;
+            color: #888
+        }
+
+        .error {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #ffcc88;
+            opacity: .85
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="back-entry" aria-label="Back">
+        <button id="backBtn" class="btn" type="button" aria-label="Go back">← Back</button>
+    </nav>
+
+    <div class="container">
+        <header class="page">
+            <h1>Ink Sketches / Design</h1>
+            <!-- <a class="btn" href="./index.html#slide-2">Index</a> -->
+        </header>
+
+        <div id="loading" class="loading">
+            Loading gallery…
+            <div id="errMsg" class="error" style="display:none"></div>
+        </div>
+        <section id="grid" class="gallery" hidden></section>
+    </div>
+
+    <!-- Lightbox -->
+    <div id="lightbox" class="overlay" aria-hidden="true">
+        <div class="backdrop"></div>
+        <div class="panel">
+            <div class="ov-header">
+                <div class="ov-title" id="ovTitle"></div>
+                <button class="ov-close" aria-label="Close">×</button>
+            </div>
+            <div class="ov-view">
+                <button class="ov-prev" aria-label="Previous">‹</button>
+                <img id="ovImg" alt="">
+                <button class="ov-next" aria-label="Next">›</button>
+            </div>
+            <div class="ov-footer" id="ovMeta"></div>
+        </div>
+    </div>
+
+    <script>
+        /* —— 静音常见扩展报错（不影响功能，为了不干扰排查） —— */
+        window.addEventListener('unhandledrejection', (e) => {
+            const s = String(e.reason || '');
+            if (s.includes('Receiving end does not exist') || s.includes('message channel closed')) e.preventDefault();
+        });
+
+        /* ====================== 配置 ====================== */
+        let IMG_DIR = 'inkimg/';                    // 你的图片目录（末尾要 /）
+        const HIGHLIGHT = ['google doodle', 'tommy shelby']; // 整行突出
+        const CACHE_BUSTER = '?v=5';
+        const FETCH_CONCURRENCY = 6;                // 并发数（2~8 之间都可以）
+
+        /* ===== Inline file list（不再请求 filelist.json）===== */
+        const FILE_LIST = [
+            "Blossom.jpg",
+            "Burning Yoshihara.jpg",
+            "Crown.jpg",
+            "Elden Ring.jpg",
+            "Farewell.jpg",
+            "Glow.jpg",
+            "Google Doodle.jpg",
+            "Home.jpg",
+            "Joker.jpg",
+            "La casa de papel.jpg",
+            "Logo Design.jpg",
+            "Rain.jpg",
+            "Sekiro.jpg",
+            "Self Protrait.jpg",
+            "Tile Design.jpg",
+            "Tommy Shelby.jpg",
+            "Vayne.jpg",
+            "Saul Goodman.jpg",
+            "Tree.jpg"
+        ];
+
+        /* =================== 工具/诊断 =================== */
+        function decodeName(fn) { try { fn = decodeURIComponent(fn); } catch (_) { } return String(fn).replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim(); }
+        const $ = (s) => document.querySelector(s);
+
+        async function getListSmart() {
+            const tryPaths = [IMG_DIR + 'filelist.json', 'filelist.json'];
+            for (const p of tryPaths) {
+                try {
+                    const r = await fetch(p + CACHE_BUSTER, { cache: 'no-store' });
+                    if (r.ok) {
+                        const arr = await r.json();
+                        if (Array.isArray(arr) && arr.length) { console.log('[gallery] list:', p, arr); return arr; }
+                    }
+                } catch { }
+            }
+            throw new Error('filelist.json not found');
+        }
+        async function verifyPaths(files) {
+            const samples = files.slice(0, 3).map(n => IMG_DIR + encodeURIComponent(n) + CACHE_BUSTER);
+            let ok = 0;
+            for (const url of samples) {
+                try { const r = await fetch(url, { method: 'HEAD' }); console.log('[check]', url, r.status); if (r.ok) ok++; } catch { }
+            }
+            if (!ok) { const em = $('#errMsg'); em.style.display = 'block'; em.innerHTML = '读取不到图片：请确认 <code>IMG_DIR</code> 设置正确。'; }
+        }
+
+        /* =================== Masonry 布局 =================== */
+        const GAP = 16, COL_BASE = 360;
+        function computeColumns(W) {
+            const cols = Math.max(2, Math.floor((W + GAP) / (COL_BASE + GAP)));
+            const colW = Math.floor((W - (cols - 1) * GAP) / cols);
+            return { cols, colW };
+        }
+        let items = []; let rafId = null;
+        function layoutMasonry() {
+            cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(() => {
+                const grid = $('#grid'); const W = grid.clientWidth; const { cols, colW } = computeColumns(W);
+                const colH = new Array(cols).fill(0);
+                const used = cols * colW + (cols - 1) * GAP;
+                const left0 = Math.max(0, Math.floor((W - used) / 2));
+                let maxH = 0;
+                for (const it of items) {
+                    if (!it.ready) continue;
+                    const hero = it.hero === true;
+                    const w = hero ? used : colW;
+                    const r = (it.h && it.w) ? it.h / it.w : 1;
+                    const h = Math.round(w * r);
+                    let x, y;
+                    if (hero) { y = Math.max(...colH); x = left0; for (let i = 0; i < cols; i++) colH[i] = y + h + GAP; }
+                    else { let c = 0; for (let i = 1; i < cols; i++) if (colH[i] < colH[c]) c = i; x = left0 + c * (colW + GAP); y = colH[c]; colH[c] += h + GAP; }
+                    const node = it.node; node.style.width = w + 'px'; node.style.transform = `translate(${x}px,${y}px)`; node.style.top = '0'; node.style.left = '0';
+                    maxH = Math.max(maxH, y + h);
+                }
+                grid.style.height = maxH + 'px';
+            });
+        }
+
+        /* ============ 用 fetch→blob→ObjectURL 拉图（带超时兜底） ============ */
+        async function buildGrid(files) {
+            const grid = $('#grid');
+            items = files.map(name => ({
+                name,
+                url: IMG_DIR + encodeURIComponent(name) + CACHE_BUSTER,
+                blobURL: null, w: 0, h: 0, node: null, ready: false,
+                hero: HIGHLIGHT.some(k => decodeName(name).toLowerCase().includes(k))
+            }));
+
+            // 先挂 DOM（还不设 src）
+            for (const it of items) {
+                const cell = document.createElement('article');
+                cell.className = 'item' + (it.hero ? ' hero' : '');
+                const img = new Image(); img.loading = 'lazy'; img.decoding = 'async'; img.alt = decodeName(it.name);
+                const cap = Object.assign(document.createElement('div'), { className: 'cap', textContent: img.alt });
+                cell.appendChild(img); cell.appendChild(cap); grid.appendChild(cell); it.node = cell;
+                cell.addEventListener('click', () => openLightbox(items.indexOf(it)));
+            }
+
+            // 并发 worker（修复：只有拿到 naturalWidth/Height 后才参与布局）
+            let cursor = 0;
+            async function worker() {
+                while (cursor < items.length) {
+                    const idx = cursor++;
+                    const it = items[idx];
+                    const img = it.node.querySelector('img');
+
+                    try {
+                        const res = await fetch(it.url, { cache: 'no-store' });
+                        if (!res.ok) throw new Error('HTTP ' + res.status);
+                        const blob = await res.blob();
+                        it.blobURL = URL.createObjectURL(blob);
+
+                        // 先挂 src，再决定何时参与布局
+                        img.src = it.blobURL;
+
+                        // 显示网格（即使还没 ready，也不阻塞后续）
+                        const loading = document.getElementById('loading');
+                        if (loading) loading.remove();
+                        const grid = document.getElementById('grid');
+                        if (grid) grid.hidden = false;
+
+                        // 优先使用 decode 拿到尺寸；超时则退回 onload
+                        const waitDecode = ('decode' in img)
+                            ? Promise.race([
+                                img.decode(),
+                                new Promise((_, reject) => setTimeout(() => reject(new Error('decode-timeout')), 8000))
+                            ])
+                            : Promise.reject(new Error('no-decode'));
+
+                        // 如果 decode 失败或超时，就等待 onload/onerror（错误也要占位，避免队列阻塞）
+                        await waitDecode.catch(() => new Promise((resolve) => {
+                            img.onload = resolve;
+                            img.onerror = resolve;
+                        }));
+
+                        // —— 到这里基本能拿到 naturalWidth/Height ——
+                        it.w = Math.max(1, img.naturalWidth);
+                        it.h = Math.max(1, img.naturalHeight);
+                        it.ready = true;
+
+                        // 告知浏览器纵横比，减少回流抖动（可选但有益）
+                        img.style.aspectRatio = it.w + ' / ' + it.h;
+
+                        layoutMasonry();
+                    } catch (err) {
+                        console.warn('fetch image failed:', it.url, err);
+                        // 失败也给一个稳定占位，避免并发队列卡死
+                        it.w = 3; it.h = 2; // 约 3:2 占位
+                        it.ready = true;
+                        layoutMasonry();
+                    }
+                }
+            }
+
+            await Promise.all(Array.from({ length: FETCH_CONCURRENCY }, worker));
+            // 页面关闭时释放内存
+            window.addEventListener('beforeunload', () => { for (const it of items) if (it.blobURL) URL.revokeObjectURL(it.blobURL); });
+        }
+
+        /* =================== Lightbox =================== */
+        let current = -1;
+        function openLightbox(i) {
+            current = i; const ov = $('#lightbox'), img = $('#ovImg'), title = $('#ovTitle'), meta = $('#ovMeta'), it = items[current];
+            if (!it) return; img.src = it.blobURL || it.url; title.textContent = decodeName(it.name);
+            meta.textContent = `${it.w || '—'} × ${it.h || '—'} • ${it.name}`; ov.dataset.open = '1'; ov.setAttribute('aria-hidden', 'false');
+        }
+        function closeLightbox() { const ov = $('#lightbox'); ov.dataset.open = '0'; ov.setAttribute('aria-hidden', 'true'); }
+        function step(d) { if (!items.length) return; current = (current + d + items.length) % items.length; openLightbox(current); }
+        (function () {
+            const ov = $('#lightbox'); document.querySelector('.ov-close').addEventListener('click', closeLightbox);
+            document.querySelector('.backdrop').addEventListener('click', closeLightbox);
+            document.querySelector('.ov-prev').addEventListener('click', () => step(-1));
+            document.querySelector('.ov-next').addEventListener('click', () => step(1));
+            window.addEventListener('keydown', (e) => { if (ov.dataset.open !== '1') return; if (e.key === 'Escape') closeLightbox(); else if (e.key === 'ArrowLeft') step(-1); else if (e.key === 'ArrowRight') step(1); });
+        })();
+
+        /* =================== 回退键 =================== */
+        const BACK_FALLBACK_URL = './index.html#slide-2';
+        document.getElementById('backBtn')?.addEventListener('click', () => {
+            const canGoBack = history.length > 1 && document.referrer;
+            if (canGoBack) { try { const ref = new URL(document.referrer); if (ref.origin === location.origin) { history.back(); return; } } catch (_) { } }
+            location.href = BACK_FALLBACK_URL;
+        });
+
+        /* =================== 启动 =================== */
+        (async function init() {
+            try {
+                const files = FILE_LIST;                     // 改为使用内嵌数组
+                await verifyPaths(files);                    // 仍做路径抽检，便于发现目录写错
+                await buildGrid(files);
+                window.addEventListener('resize', layoutMasonry, { passive: true });
+            } catch (err) {
+                const loading = document.getElementById('loading');
+                const em = document.getElementById('errMsg');
+                if (loading) loading.firstChild.textContent = 'Failed to load gallery.';
+                if (em) { em.style.display = 'block'; em.textContent = '提示：确认 IMG_DIR 设置与文件名是否匹配。'; }
+                console.error(err);
+            }
+        })();
+
+    </script>
+</body>
+
+</html>

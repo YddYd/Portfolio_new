@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Data Analysis</title>
+    <style>
+        :root {
+            --bg: #0b0b0b;
+            --card: #111;
+            --ink: #eee;
+            --accent: #e4c27a;
+            --maxw: 1040px;
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        html,
+        body {
+            height: 100%
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: ui-sans-serif, system-ui, Inter, Roboto, Helvetica, Arial
+        }
+
+        a {
+            color: inherit
+        }
+
+        .container {
+            max-width: var(--maxw);
+            margin: 0 auto;
+            padding: 28px 16px 80px
+        }
+
+        header.page {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, .08);
+            padding: 8px 0 18px
+        }
+
+        h1 {
+            margin: 0;
+            font-size: clamp(28px, 3.4vw, 42px);
+            color: #fff;
+            letter-spacing: .2px
+        }
+
+        .sub {
+            margin: 0;
+            opacity: .75
+        }
+
+        /* back button (optional) */
+        .back-entry {
+            position: fixed;
+            left: 16px;
+            top: 16px;
+            z-index: 99
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 14px;
+            border: 1px solid rgba(255, 255, 255, .22);
+            border-radius: 999px;
+            cursor: pointer;
+            background: linear-gradient(180deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .02));
+            color: #fff;
+            font-weight: 600;
+            letter-spacing: .2px
+        }
+
+        .btn:hover {
+            border-color: #fff
+        }
+
+        @media print {
+            .back-entry {
+                display: none
+            }
+        }
+
+        /* post sections */
+        .post {
+            display: grid;
+            gap: 14px;
+            margin: 26px 0 28px;
+            background: var(--card);
+            border: 1px solid rgba(255, 255, 255, .10);
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 14px 42px rgba(0, 0, 0, .42)
+        }
+
+        .shot {
+            line-height: 0;
+            font-size: 0;
+            background: #000
+        }
+
+        .shot img {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        .copy {
+            padding: 16px 18px 18px;
+        }
+
+        .copy h3 {
+            margin: 0 0 8px;
+            font-size: 18px;
+            color: #fff
+        }
+
+        .copy p {
+            margin: 0;
+            opacity: .9;
+            line-height: 1.6
+        }
+
+        .loading {
+            padding: 40px;
+            text-align: center;
+            color: #999
+        }
+
+        .hidden {
+            display: none !important
+        }
+
+        /* Data source block */
+        .source-card {
+            margin: 22px 0 0;
+            padding: 14px 16px;
+            background: var(--card);
+            border: 1px solid rgba(255, 255, 255, .10);
+            border-radius: 12px
+        }
+
+        .source-card .label {
+            font-size: 12px;
+            opacity: .7;
+            text-transform: uppercase;
+            letter-spacing: .12em;
+            margin-bottom: 6px
+        }
+
+        .source-card a {
+            color: #fff;
+            text-decoration: underline;
+            text-underline-offset: 3px
+        }
+
+
+
+        /* 强制缩放版 */
+        .viz-wrap {
+            background: #000;
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+            /* 默认不滚动 */
+        }
+
+        .viz-wrap[data-scroll="1"] {
+            overflow: auto;
+            /* 小到阈值才滚动 */
+            place-items: unset;
+        }
+
+        /* 以 1600×927 作为“画布”，再整体 scale */
+        #viz1756855418076 {
+            width: 1600px;
+            height: 927px;
+            transform-origin: top left;
+            will-change: transform;
+        }
+
+        #viz1756855418076 object {
+            display: block;
+            width: 1600px;
+            height: 927px;
+        }
+
+        /* —— Language toggle —— */
+        .lang-switch {
+            position: fixed;
+            top: max(14px, env(safe-area-inset-top));
+            right: max(14px, env(safe-area-inset-right));
+            z-index: 40;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(28, 28, 28, .80);
+            border: 1px solid rgba(255, 255, 255, .12);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, .35);
+            font-size: 12px;
+            letter-spacing: .02em;
+            user-select: none;
+            cursor: pointer;
+            -webkit-backdrop-filter: blur(4px);
+            backdrop-filter: blur(4px);
+        }
+
+        .lang-switch .opt {
+            opacity: .65;
+            transition: opacity .2s ease, transform .2s ease;
+        }
+
+        .lang-switch .sep {
+            opacity: .35
+        }
+
+        .lang-switch.is-zh .opt.zh,
+        .lang-switch:not(.is-zh) .opt.en {
+            opacity: 1;
+            transform: translateY(-1px);
+        }
+
+        .lang-switch:hover .opt {
+            opacity: .85
+        }
+
+        @media (max-width:760px) {
+            .lang-switch {
+                padding: 6px 9px;
+                font-size: 11px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- optional Back button -->
+    <nav class="back-entry" aria-label="Back">
+        <button id="backBtn" class="btn" type="button" data-i18n="back">← Back</button>
+    </nav>
+
+    <div id="langSwitch" class="lang-switch" aria-label="Switch language">
+        <span class="opt zh">中</span><span class="sep">/</span><span class="opt en">EN</span>
+    </div>
+
+    <div class="container">
+        <header class="page">
+            <div>
+                <h1 data-i18n="h1">Data Analysis — Process Notes</h1>
+            </div>
+        </header>
+
+        <section class="viz-card" aria-label="Interactive Tableau">
+            <header data-i18n="vizHeader">Interactive Tableau View</header>
+            <div class="viz-wrap">
+                <!-- ↓ 使用你提供的 embed，稍作改造以响应式 -->
+                <div class="tableauPlaceholder" id="viz1756855418076">
+                    <noscript>
+                        <a href="#"><img alt="Tableau static preview"
+                                src="https://public.tableau.com/static/images/4K/4KBJ32YW9/1_rss.png"
+                                style="border:none" /></a>
+                    </noscript>
+                    <object class="tableauViz" style="display:none;">
+                        <param name="host_url" value="https%3A%2F%2Fpublic.tableau.com%2F" />
+                        <param name="embed_code_version" value="3" />
+                        <param name="path" value="shared/4KBJ32YW9" />
+                        <param name="toolbar" value="yes" />
+                        <param name="static_image"
+                            value="https://public.tableau.com/static/images/4K/4KBJ32YW9/1.png" />
+                        <param name="animate_transition" value="yes" />
+                        <param name="display_static_image" value="yes" />
+                        <param name="display_spinner" value="yes" />
+                        <param name="display_overlay" value="yes" />
+                        <param name="display_count" value="yes" />
+                        <param name="language" value="EN" />
+                    </object>
+                </div>
+            </div>
+        </section>
+
+
+        <div id="feed"></div>
+        <div id="loading" class="loading" data-i18n="loading">Loading images…</div>
+        <section class="source-card" role="contentinfo" aria-label="Data source">
+            <div class="label" data-i18n="sourceLabel">Data source</div>
+            <a href="https://open.canada.ca/data/en/dataset/363fff31-6a07-41eb-9922-e9b64192b08b" target="_blank"
+                rel="noopener" data-i18n="sourceText">
+                open.canada.ca — Canadian Public Libraries Statistics
+            </a>
+        </section>
+    </div>
+
+    <script>
+        /* ============== CONFIG ============== */
+        const IMG_DIR = 'daimg/';
+        const BACK_FALLBACK_URL = './index.html';
+        const FILE_LIST = ["001.png", "002.png", "003.png", "004.png", "005.png", "006.png", "007.png"];
+
+        /* ===== i18n dictionary ===== */
+        const I18N = {
+            en: {
+                title: 'Data Analysis',
+                back: '← Back',
+                h1: 'Data Analysis — Process Notes',
+                vizHeader: 'Interactive Tableau View',
+                loading: 'Loading images…',
+                sourceLabel: 'Data source',
+                sourceText: 'open.canada.ca — Canadian Public Libraries Statistics',
+                noShotTip: (n) => `Note: ${n} text blocks have no matching screenshots.`,
+                loadFail: (err) => `Failed to load images: ${err} (Tip: place a filelist.json like ["01.png","02.jpg",...])`,
+                notes: [
+                    {
+                        title: 'Initial cleaning & column-name unification',
+                        text: `First, drop “noise” columns — remove non-essential info fields (e.g., headers containing “Unnamed”, “Web Site”, “Please provide”), and library ID–type columns.
+1) Standardize column names:
+• Extract the leading “code” from each header (e.g., A1.10) and use the 2020 table as the reference dictionary.
+• Rename 2017–2019 headers via this code→standard-name map to align with 2020.
+• Add a year column to each annual table.
+2) Merge four years: clean_df = concat([2017, 2018, 2019, 2020]).
+Finally, drop rows where ‘Library Full Name’ is empty.`
+                    },
+                    {
+                        title: 'Further cleaning & type conversion',
+                        text: `• Convert number-like strings to numeric (e.g., remove commas in “100,000” then cast).
+• Drop “mostly zeros” columns: if zeros > 90%.
+• Drop low-variance columns: variance ≤ 0 (constants).
+• Drop high-missing columns: missing rate ≥ 25%.
+Defaults: zero_threshold=0.9, variance_threshold=0.0, nan_threshold=0.25.`
+                    },
+                    {
+                        title: 'Funding “sources vs uses” overview',
+                        text: `Select columns by keywords.
+Sources: Funding / Grant / Revenue / Received.
+Uses: Collection / Materials / Expenses / Services / Expenditures.
+Sum and sort globally; merge sources with <2% share into “Other”.
+Plots: (1) pie for sources (after grouping); (2) Top-10 bar for uses (exclude “Total Operating Expenditures”).`
+                    },
+                    {
+                        title: 'Correlation heatmap',
+                        text: `Coerce numeric columns where possible and compute correlations with B5.0 Total Operating Expenditures.
+Take the Top-20 absolute correlations and draw a heatmap.`
+                    },
+                    {
+                        title: 'Derived metrics',
+                        text: `Add four metrics per record:
+• Funding Per Capita = Total Operating Revenues / Resident Population Served
+• Operating Cost Per Capita = Total Operating Expenditures / Resident Population Served
+• Cost Per Visit = Total Operating Expenditures / No. of visits
+• Cost Per Borrow = Total Operating Expenditures / Total circulation
+Return a compact table with only ID fields + these metrics.`
+                    },
+                    {
+                        title: 'Metric distributions by year',
+                        text: `For each metric, render a year-wise boxplot + histogram (with KDE) to inspect distributions and differences.`
+                    },
+                    {
+                        title: 'Grouped comparisons (two binnings)',
+                        text: `Population groups (P1.1 Resident Population Served): <5k / 5k–20k / 20k–100k / >100k — draw 2×2 boxplots.
+Income groups (B2.9 Total Operating Revenues): ≤100k / 100k–500k / 500k–2M / >2M — draw another 2×2 set.`
+                    }
+                ]
+            },
+            zh: {
+                title: '数据分析',
+                back: '← 返回',
+                h1: '数据分析 — 过程记录',
+                vizHeader: '交互式 Tableau 视图',
+                loading: '图片加载中…',
+                sourceLabel: '数据来源',
+                sourceText: 'open.canada.ca — 加拿大公共图书馆统计',
+                noShotTip: (n) => `提示：有 ${n} 段文字没有对应的截图。`,
+                loadFail: (err) => `图片加载失败：${err}（提示：目录下放一个 filelist.json，如 ["01.png","02.jpg",...]）`,
+                notes: [
+                    {
+                        title: '初步清洗与列名统一',
+                        text: `先剔除“噪声列”——如含 “Unnamed”、“Web Site”、“Please provide” 的说明字段，以及各种 ID 类字段。
+1）标准化列名：
+• 从表头抽取前缀“代码”（如 A1.10），以 2020 年表为基准字典；
+• 用 代码→标准名 映射重命名 2017–2019 年的列，统一到 2020；
+• 给每个年度表增加 year 列。
+2）合并四年：clean_df = concat([2017, 2018, 2019, 2020])。
+最后丢弃 ‘Library Full Name’ 为空的行。`
+                    },
+                    {
+                        title: '进一步清洗与类型转换',
+                        text: `• 将“数字样式”的字符串转为数值（如去掉 “100,000” 中逗号再转换）。
+• 删除“几乎全为 0”的列：零值占比 > 90%；
+• 删除低方差列：方差 ≤ 0（等同常量列）；
+• 删除缺失率高的列：缺失 ≥ 25%。
+默认：zero_threshold=0.9，variance_threshold=0.0，nan_threshold=0.25。`
+                    },
+                    {
+                        title: '资金「来源 vs 去向」概览',
+                        text: `按关键词选列：
+来源：Funding / Grant / Revenue / Received；
+去向：Collection / Materials / Expenses / Services / Expenditures。
+全局求和并排序；占比 <2% 的来源并入 “Other”。
+图表：① 来源饼图（聚合后）；② 去向 Top-10 条形图（排除 “Total Operating Expenditures” 以免重复计入）。`
+                    },
+                    {
+                        title: '相关性热力图',
+                        text: `尽可能把字段转为数值，与 B5.0 Total Operating Expenditures 求相关；
+取绝对值 Top-20 画热力图。`
+                    },
+                    {
+                        title: '派生指标',
+                        text: `每条记录新增 4 个指标：
+• 人均筹资 = Total Operating Revenues / Resident Population Served
+• 人均运营成本 = Total Operating Expenditures / Resident Population Served
+• 次均成本 = Total Operating Expenditures / No. of visits
+• 册均成本 = Total Operating Expenditures / Total circulation
+导出仅含 ID 字段 + 以上指标的精简表。`
+                    },
+                    {
+                        title: '各年度的指标分布',
+                        text: `对每个指标绘制按年度的箱线图 + 直方图（含 KDE），观察分布及年际差异。`
+                    },
+                    {
+                        title: '分组对比（两种分箱）',
+                        text: `按人口分组（P1.1 Resident Population Served）：<5k / 5k–20k / 20k–100k / >100k，画 2×2 箱线图；
+按收入分组（B2.9 Total Operating Revenues）：≤100k / 100k–500k / 500k–2M / >2M，再画一组 2×2。`
+                    }
+                ]
+            }
+        };
+
+        let LANG = 'en';
+        const $ = (sel, root = document) => root.querySelector(sel);
+
+        /* ===== apply language to static UI ===== */
+        function applyI18n(lang) {
+            LANG = (lang === 'zh' ? 'zh' : 'en');
+            const t = I18N[LANG];
+
+            document.documentElement.lang = (LANG === 'zh' ? 'zh-CN' : 'en');
+            document.title = t.title;
+
+            const h1 = document.querySelector('[data-i18n="h1"]');
+            if (h1) h1.textContent = t.h1;
+            $('#backBtn')?.replaceChildren(t.back);
+            $('[data-i18n="vizHeader"]')?.replaceChildren(t.vizHeader);
+            const loading = $('#loading');
+            if (loading && !loading.dataset.loaded) loading.textContent = t.loading;
+            $('[data-i18n="sourceLabel"]')?.replaceChildren(t.sourceLabel);
+            $('#sourceLink')?.replaceChildren(t.sourceText);
+
+            // Tableau 内部 UI 语言参数（新进入页面或刷新后生效）
+            const p = document.querySelector('#viz1756855418076 object param[name="language"]');
+            if (p) p.setAttribute('value', LANG === 'zh' ? 'ZH' : 'EN');
+
+            // 切换按钮态 & 记忆
+            $('#langSwitch')?.classList.toggle('is-zh', LANG === 'zh');
+            try { localStorage.setItem('lang', LANG); } catch (_) { }
+        }
+
+        /* ===== re-render note cards (titles + text) ===== */
+        function rerenderNotes() {
+            const notes = I18N[LANG].notes;
+            const cards = document.querySelectorAll('#feed .post .copy');
+            cards.forEach((wrap, i) => {
+                const n = notes[i]; if (!n) return;
+                const h3 = wrap.querySelector('h3');
+                const p = wrap.querySelector('p');
+                if (h3) h3.textContent = n.title;
+                if (p) p.textContent = n.text;
+            });
+        }
+
+        /* ===== Back behavior ===== */
+        $('#backBtn')?.addEventListener('click', () => {
+            const canGoBack = history.length > 1 && document.referrer;
+            if (canGoBack) {
+                try {
+                    const ref = new URL(document.referrer);
+                    if (ref.origin === location.origin) { history.back(); return; }
+                } catch (_) { }
+            }
+            location.href = BACK_FALLBACK_URL;
+        });
+
+        /* ===== Helpers for images ===== */
+        const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+        const isImage = n => /\.(png|jpe?g|webp|gif|bmp|svg)$/i.test(n);
+
+        async function fetchListFromJson(base) {
+            try {
+                const r = await fetch(base + 'filelist.json', { cache: 'no-store' }); if (!r.ok) throw 0;
+                const arr = await r.json(); return Array.isArray(arr) ? arr.filter(isImage) : null;
+            } catch (_) { return null; }
+        }
+        async function fetchListFromIndex(base) {
+            try {
+                const r = await fetch(base, { cache: 'no-store' }); if (!r.ok) throw 0;
+                const html = await r.text();
+                const doc = new DOMParser().parseFromString(html, 'text/html');
+                const names = Array.from(doc.querySelectorAll('a'))
+                    .map(a => a.getAttribute('href') || '')
+                    .filter(h => h && !h.startsWith('?') && !h.startsWith('#') && !h.startsWith('/'))
+                    .map(h => h.split('/').pop())
+                    .filter(isImage);
+                return names;
+            } catch (_) { return null; }
+        }
+        async function getImageList(base) {
+            let list = await fetchListFromJson(base);
+            if (!list) list = await fetchListFromIndex(base);
+            if (!list) throw new Error('No images found. Enable directory index or add filelist.json.');
+            return list.filter(Boolean).sort(collator.compare).map(n => base + n);
+        }
+
+        /* ===== Render feed using current language ===== */
+        function renderFeed(imgs) {
+            const t = I18N[LANG];
+            const feed = $('#feed');
+            const loading = $('#loading');
+            loading.classList.add('hidden'); loading.dataset.loaded = '1';
+
+            const notes = t.notes;
+            const n = Math.min(imgs.length, notes.length);
+            for (let i = 0; i < n; i++) {
+                const sec = document.createElement('article'); sec.className = 'post';
+                sec.innerHTML = `
+      <figure class="shot"><img src="${imgs[i]}" loading="lazy" decoding="async" alt=""></figure>
+      <div class="copy">
+        <h3>${notes[i].title}</h3>
+        <p>${notes[i].text}</p>
+      </div>`;
+                feed.appendChild(sec);
+            }
+            if (imgs.length > notes.length) {
+                imgs.slice(notes.length).forEach(src => {
+                    const sec = document.createElement('article'); sec.className = 'post';
+                    sec.innerHTML = `<figure class="shot"><img src="${src}" loading="lazy" decoding="async" alt=""></figure>`;
+                    feed.appendChild(sec);
+                });
+            } else if (notes.length > imgs.length) {
+                const tip = document.createElement('div'); tip.className = 'loading';
+                tip.textContent = t.noShotTip(notes.length - imgs.length);
+                feed.appendChild(tip);
+            }
+        }
+
+        /* ===== Boot ===== */
+        (function init() {
+            // 初始语言：localStorage > 浏览器
+            let lang = 'en';
+            try { lang = localStorage.getItem('lang') || ((navigator.language || '').toLowerCase().includes('zh') ? 'zh' : 'en'); } catch (_) { }
+            applyI18n(lang);
+
+            try {
+                // Use inline list, keep numeric-aware sort, then prefix directory
+                const imgs = FILE_LIST
+                    .filter(isImage)
+                    .sort(collator.compare)
+                    .map(n => IMG_DIR + n);
+
+                renderFeed(imgs);
+            } catch (err) {
+                const t = I18N[LANG];
+                const loading = $('#loading');
+                loading.textContent = t.loadFail(err?.message || 'inline list error');
+            }
+
+            // 绑定语言按钮
+            $('#langSwitch')?.addEventListener('click', () => {
+                applyI18n(LANG === 'zh' ? 'en' : 'zh');
+                rerenderNotes();
+                // 提示：Tableau 内嵌的 UI 文案会在下次加载/刷新后切换到对应语言
+            });
+        })();
+    </script>
+
+
+    <script>
+        (function () {
+            const DIV_ID = 'viz1756855418076';
+            const BASE_W = 1600;
+            const BASE_H = 927;
+            const MIN_SCALE = 0.68;   // 允许的最小缩放（再小就滚动）
+            const MAX_VH = 0.82;   // 容器最多占视口高度 82%
+
+            const div = document.getElementById(DIV_ID);
+            if (!div) return;
+            const obj = div.getElementsByTagName('object')[0];
+            const wrap = div.closest('.viz-wrap') || div.parentElement;
+
+            function size() {
+                const availW = wrap.clientWidth || 800;
+                const availH = Math.floor(window.innerHeight * MAX_VH);
+
+                // 希望的缩放：在宽/高两个维度都能塞下
+                const sWanted = Math.min(1, availW / BASE_W, availH / BASE_H);
+
+                // 是否触发滚动
+                const useScroll = sWanted < MIN_SCALE;
+
+                const scale = useScroll ? MIN_SCALE : sWanted;
+
+                // 应用缩放
+                const scaledW = Math.round(BASE_W * scale);
+                const scaledH = Math.round(BASE_H * scale);
+
+                div.style.transform = `scale(${scale})`;
+                wrap.dataset.scroll = useScroll ? '1' : '0';
+
+                // 容器高度限制（太高就出现纵向滚动）
+                wrap.style.maxHeight = Math.min(scaledH, availH) + 'px';
+
+                // 让缩放后的内容垂直可见区域刚好贴合
+                // （不设置 width/height，避免撑爆布局；只靠 transform 压缩）
+            }
+
+            function loadScriptOnce() {
+                if (document.querySelector('script[src*="public.tableau.com/javascripts/api/viz_v1.js"]')) return;
+                const s = document.createElement('script');
+                s.src = 'https://public.tableau.com/javascripts/api/viz_v1.js';
+                obj.parentNode.insertBefore(s, obj);
+            }
+
+            // 懒加载 + 观察容器尺寸（更“刚”）
+            const ro = new ResizeObserver(size);
+            ro.observe(wrap);
+
+            if ('IntersectionObserver' in window) {
+                const io = new IntersectionObserver(es => {
+                    if (es.some(e => e.isIntersecting)) { loadScriptOnce(); io.disconnect(); }
+                }, { rootMargin: '200px' });
+                io.observe(div);
+            } else {
+                loadScriptOnce();
+            }
+
+            window.addEventListener('resize', size, { passive: true });
+            window.addEventListener('orientationchange', size, { passive: true });
+            // 初始
+            size();
+        })();
+    </script>
+
+
+
+</body>
+
+</html>

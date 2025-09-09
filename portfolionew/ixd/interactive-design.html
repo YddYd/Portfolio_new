@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Stack</title>
+  <style>
+    :root {
+      --bg: #0b0b0b;
+      --paper: #ffffff;
+      --ink: #0f0f0f;
+      --accent: #e4c27a;
+      --maxw: 1120px;
+    }
+
+    * {
+      box-sizing: border-box
+    }
+
+    html,
+    body {
+      height: 100%
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: #e8e8e8;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Inter, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+
+    a {
+      color: inherit
+    }
+
+    .container {
+      max-width: var(--maxw);
+      margin: 0 auto;
+      padding: 24px 16px 80px
+    }
+
+    header.page {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 24px 0 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, .08);
+    }
+
+    header.page h1 {
+      margin: 0;
+      font-size: clamp(28px, 3.6vw, 44px);
+      letter-spacing: .3px;
+      color: #fff;
+    }
+
+    header.page p {
+      margin: 0;
+      opacity: .78
+    }
+
+    /* prototype preview */
+    .prototype {
+      max-width: var(--maxw);
+      margin: 18px 0 26px;
+      background: #111;
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 10px 36px rgba(0, 0, 0, .35);
+    }
+
+    .prototype .img-wrap {
+      background: #fff
+    }
+
+    .prototype img {
+      display: block;
+      width: 100%;
+      height: auto
+    }
+
+    .prototype .actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+      background: #0f0f0f;
+      border-top: 1px solid rgba(255, 255, 255, .08);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 10px 16px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, .22);
+      text-decoration: none;
+      color: #fff;
+      font-weight: 600;
+      letter-spacing: .2px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .02));
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .3);
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      border-color: #fff
+    }
+
+    .btn span.dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent)
+    }
+
+    /* PDF-like continuous strip */
+    .paper {
+      background: var(--paper);
+      color: var(--ink);
+      max-width: var(--maxw);
+      margin: 0 auto;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 18px 46px rgba(0, 0, 0, .45);
+      border: 1px solid rgba(0, 0, 0, .1);
+    }
+
+    .seq {
+      line-height: 0;
+      /* kill inline gaps */
+      font-size: 0;
+      /* belt + suspenders */
+      background: #fff;
+    }
+
+    .seq img {
+      display: block;
+      width: 100%;
+      height: auto;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      image-rendering: auto;
+    }
+
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      color: #666;
+      background: #fff;
+      font-size: 14px;
+    }
+
+    .footer-note {
+      opacity: .6;
+      font-size: 12px;
+      margin-top: 14px
+    }
+
+    .hint {
+      font-size: 13px;
+      opacity: .75;
+      margin-top: 10px
+    }
+
+    .hidden {
+      display: none !important
+    }
+
+    /* print: only the continuous images */
+    @media print {
+      body {
+        background: #fff
+      }
+
+      header.page,
+      .prototype,
+      .footer-note {
+        display: none
+      }
+
+      .container {
+        padding: 0
+      }
+
+      .paper {
+        border: 0;
+        border-radius: 0;
+        box-shadow: none
+      }
+    }
+
+    /* Back button (fixed at top-left) */
+    .back-entry {
+      position: fixed;
+      left: 16px;
+      top: 16px;
+      z-index: 99;
+    }
+
+    .back-entry .btn {
+      padding: 8px 14px;
+      font-weight: 600
+    }
+
+    @media (min-width: 800px) {
+      .back-entry {
+        left: 24px;
+        top: 22px
+      }
+    }
+
+    @media print {
+      .back-entry {
+        display: none
+      }
+    }
+
+    /* 打印时隐藏 */
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+    <nav class="back-entry" aria-label="Back">
+      <button id="backBtn" class="btn" type="button" aria-label="Go back">← Back</button>
+    </nav>
+
+    <header class="page">
+      <h1>Interactive Design — Storyboard / Screens Flow</h1>
+    </header>
+
+    <!-- Prototype preview (image above the button) -->
+    <section class="prototype" aria-label="Prototype preview">
+      <div class="img-wrap">
+        <!-- Replace src with your prototype mock image path -->
+        <img id="protoPreview" src="img/prototype_preview.jpg" alt="Prototype preview">
+      </div>
+      <div class="actions">
+        <a id="protoBtn" class="btn" href="#" target="_blank" rel="noopener">
+          <span class="dot"></span> Open Prototype
+        </a>
+      </div>
+    </section>
+
+    <!-- The continuous image strip -->
+    <section class="paper" aria-label="Sequential images">
+      <div id="loading" class="loading">Loading images…</div>
+      <div id="seq" class="seq hidden"></div>
+    </section>
+  </div>
+
+  <script>
+    /* ====== CONFIGURE THESE THREE VALUES ====== */
+    const IMG_DIR = 'ixdimg/';                 // Folder that contains your sequence images
+    const PROTOTYPE_URL = 'https://stack.herokuapp.com/'; // Your prototype link (Figma / Heroku / etc.)
+    const PROTOTYPE_PREVIEW_SRC = 'preview.png'; // A hero image shown above the button
+
+    /* Inline file list (no external JSON needed) */
+    const FILE_LIST = [
+      "001.png", "002.png", "003.png", "004.png", "005.png", "006.png", "007.png",
+      "008.png", "009.png", "010.png", "011.png", "012.png", "013.png", "014.png",
+      "015.png", "016.png", "017.png", "018.png", "019.png", "020.png", "021.png",
+      "022.png", "023.png", "024.png", "025.png", "026.png", "027.png", "028.png",
+      "029.png"
+    ];
+
+    /* ========================================== */
+
+    document.getElementById('protoBtn').href = PROTOTYPE_URL;
+    document.getElementById('protoPreview').src = PROTOTYPE_PREVIEW_SRC;
+
+    /* Natural sort using Intl.Collator (handles 1,2,10 correctly) */
+    const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+    const isImage = (name) => /\.(png|jpe?g|webp|gif|bmp|svg)$/i.test(name);
+
+    /* Try to read file list in this order:
+       1) filelist.json (a simple array of filenames)
+       2) server directory index HTML (Apache/nginx autoindex)
+       If both fail, we show a helpful message.
+    */
+    async function fetchListFromJson(base) {
+      try {
+        const r = await fetch(base + 'filelist.json', { cache: 'no-store' });
+        if (!r.ok) throw new Error('no json');
+        const arr = await r.json();
+        if (Array.isArray(arr)) return arr.filter(isImage);
+      } catch (e) { }
+      return null;
+    }
+
+    async function fetchListFromIndex(base) {
+      try {
+        const r = await fetch(base, { cache: 'no-store' });
+        if (!r.ok) throw new Error('no index');
+        const html = await r.text();
+        // Create a DOM to parse anchors
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const hrefs = Array.from(doc.querySelectorAll('a'))
+          .map(a => a.getAttribute('href') || '')
+          .filter(h => h && !h.startsWith('?') && !h.startsWith('#') && !h.startsWith('/'))
+          .filter(h => isImage(h));
+        // Some indexes include full URLs; trim to names
+        const names = hrefs.map(h => h.split('/').pop());
+        return names;
+      } catch (e) { }
+      return null;
+    }
+
+    async function getImageList(base) {
+      // Prefer JSON manifest for reliability
+      let list = await fetchListFromJson(base);
+      if (!list) list = await fetchListFromIndex(base);
+      if (!list) throw new Error('No images found. Ensure directory indexing is enabled or add filelist.json.');
+      // Remove parent/self entries and sort naturally
+      list = list
+        .filter(n => n && n !== '../' && n !== './')
+        .sort(collator.compare);
+      // Prefix with base
+      return list.map(n => (n.startsWith('http') ? n : base + n));
+    }
+
+    function renderImages(urls) {
+      const seq = document.getElementById('seq');
+      const loader = document.getElementById('loading');
+      loader.classList.add('hidden');
+      seq.classList.remove('hidden');
+      urls.forEach(src => {
+        const img = new Image();
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        img.alt = '';
+        img.src = src;
+        seq.appendChild(img);
+      });
+    }
+
+    (async function init() {
+      try {
+        const urls = FILE_LIST
+          .filter(isImage)
+          .sort(collator.compare)                     // 自然排序：001, 002, … 010, 011
+          .map(n => (n.startsWith('http') ? n : IMG_DIR + n));
+        renderImages(urls);
+      } catch (err) {
+        const loader = document.getElementById('loading');
+        loader.textContent = 'Failed to load image list: ' + (err?.message || 'inline list error');
+      }
+    })();
+
+  </script>
+
+  <script>
+    // 回退失败时跳转到这里（按需改成你的首页或某个锚点）
+    const BACK_FALLBACK_URL = '../index.html'; // 例：'./index.html#slide-1'
+
+    document.getElementById('backBtn')?.addEventListener('click', () => {
+      const canGoBack = history.length > 1 && document.referrer;
+      if (canGoBack) {
+        try {
+          const ref = new URL(document.referrer);
+          if (ref.origin === location.origin) { history.back(); return; }
+        } catch (_) { /* ignore parse errors */ }
+      }
+      location.href = BACK_FALLBACK_URL;
+    });
+  </script>
+
+</body>
+
+</html>

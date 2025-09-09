@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/x-icon" href="img/favicon.ico">
+    <title>ESP32 Gesture</title>
+    <style>
+        :root {
+            --bg: #0b0b0b;
+            --card: #111;
+            --ink: #ddd;
+            --accent: #E4C27A;
+            --maxw: 1120px
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        html,
+        body {
+            height: 100%
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: ui-sans-serif, system-ui, Inter, Roboto, Helvetica, Arial
+        }
+
+        a {
+            color: inherit
+        }
+
+        .container {
+            max-width: var(--maxw);
+            margin: 0 auto;
+            padding: 24px 16px 80px
+        }
+
+        header.page {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 14px
+        }
+
+        h1 {
+            margin: 0;
+            font-size: clamp(28px, 3.6vw, 44px);
+            color: #fff;
+            letter-spacing: .3px
+        }
+
+        .lang-toggle {
+            display: flex;
+            gap: 10px;
+            align-items: center
+        }
+
+        .btn {
+            text-decoration: none;
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, .22);
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .02));
+            cursor: pointer;
+        }
+
+        .block {
+            display: grid;
+            gap: 12px;
+            margin-top: 18px;
+            border: 1px solid rgba(255, 255, 255, .1);
+            border-radius: 18px;
+            overflow: hidden;
+            background: var(--card);
+            box-shadow: 0 16px 44px rgba(0, 0, 0, .35)
+        }
+
+        .block header {
+            padding: 12px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, .08)
+        }
+
+        .block h2 {
+            margin: 0;
+            font-size: 18px;
+            letter-spacing: .2px;
+            color: #fff
+        }
+
+        .figure {
+            padding: 14px
+        }
+
+        .media {
+            position: relative;
+            width: 90%;
+            aspect-ratio: 16/9;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, .08)
+        }
+
+        .media img,
+        .media video {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block
+        }
+
+        .desc {
+            font-size: 15px;
+            line-height: 1.7;
+            opacity: .95;
+            padding: 0 14px 16px
+        }
+
+        .desc code {
+            background: #000;
+            padding: 2px 6px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, .12)
+        }
+
+        .video-card .figure {
+            padding: 0 14px 14px
+        }
+
+        .note {
+            font-size: 12px;
+            opacity: .7;
+            padding: 0 14px 14px
+        }
+
+        @media print {
+            .btn {
+                display: none
+            }
+
+            .block {
+                box-shadow: none
+            }
+        }
+
+
+        /* Back button (fixed at top-left) */
+        .back-entry {
+            position: fixed;
+            left: 16px;
+            top: 16px;
+            z-index: 99;
+        }
+
+        .back-entry .btn {
+            padding: 8px 14px;
+            font-weight: 600
+        }
+
+        @media (min-width: 800px) {
+            .back-entry {
+                left: 24px;
+                top: 22px
+            }
+        }
+
+        @media print {
+            .back-entry {
+                display: none
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <nav class="back-entry" aria-label="Back">
+            <button id="backBtn" class="btn" type="button" aria-label="Go back">← Back</button>
+        </nav>
+
+        <header class="page">
+            <div>
+                <h1 id="t-title">CNN based Embedded Perception — ESP32 Gesture Control</h1>
+                <p id="t-lead" style="opacity:.8;margin:6px 0 0">Gesture-controlled IoT with on-device ML and real-time
+                    web UI.</p>
+            </div>
+            <div class="lang-toggle">
+                <button id="langBtn" class="btn" type="button">中文</button>
+            </div>
+        </header>
+
+        <!-- 1 -->
+        <section class="block">
+            <header>
+                <h2 id="t-1h">System Architecture</h2>
+            </header>
+            <div class="figure">
+                <figure class="media"><img id="img-1" alt=""></figure>
+            </div>
+            <div class="desc" id="t-1p">
+                Device (ESP32 + MPU6050) → Server (Node.js + Socket.IO) → Front-end (HTML/JS).
+                The device performs on-device inference and reports status; the server relays via REST & WebSocket; the
+                UI reflects sensor and actuator states in real time.
+            </div>
+        </section>
+
+        <!-- 2 -->
+        <section class="block">
+            <header>
+                <h2 id="t-2h">Main Components</h2>
+            </header>
+            <div class="figure">
+                <figure class="media"><img id="img-2" alt=""></figure>
+            </div>
+            <div class="desc" id="t-2p">
+                ESP32 runs TFLite Micro & networking; MPU6050 captures IMU streams; LEDs/fans emulate smart appliances;
+                JavaScript + Socket.IO provide a low-latency data channel.
+            </div>
+        </section>
+
+        <!-- 3 -->
+        <section class="block">
+            <header>
+                <h2 id="t-3h">CNN Model Design</h2>
+            </header>
+            <div class="figure">
+                <figure class="media"><img id="img-3" alt=""></figure>
+            </div>
+            <div class="desc" id="t-3p">
+                Input is a 128×3 time-series window. A lightweight network with DepthwiseConv2D and dense layers outputs
+                gesture classes via Softmax, balancing accuracy and footprint.
+            </div>
+        </section>
+
+        <!-- 4 -->
+        <section class="block">
+            <header>
+                <h2 id="t-4h">Data Collection</h2>
+            </header>
+            <div class="figure">
+                <figure class="media"><img id="img-4" alt=""></figure>
+            </div>
+            <div class="desc" id="t-4p">
+                Record predefined gestures (orbit, swing, tilt) with the IMU; generate samples using a sliding window;
+                label manually; augment with crop/shift/noise to increase robustness.
+            </div>
+        </section>
+
+        <!-- 5 -->
+        <section class="block">
+            <header>
+                <h2 id="t-5h">Hardware & Network</h2>
+            </header>
+            <div class="figure">
+                <figure class="media"><img id="img-5" alt=""></figure>
+            </div>
+            <div class="desc" id="t-5p">
+                ESP32 ↔ MPU6050 over I²C. The device POSTs sensor/gesture to <code>http://&lt;IP&gt;:8080/api/…</code>.
+                Socket.IO broadcasts <code>sensor</code>/<code>gesture</code>/<code>led</code>/<code>fan</code> events
+                for the front-end to update instantly.
+            </div>
+        </section>
+
+        <!-- Video -->
+        <section class="block video-card">
+            <header>
+                <h2 id="t-vh">Video Demonstration</h2>
+            </header>
+            <div class="figure">
+                <figure class="media">
+                    <video id="demoVideo" controls playsinline poster="media/poster.jpg">
+                        <source src="video/demo.mp4" type="video/mp4" />
+                    </video>
+                </figure>
+            </div>
+            </p>
+        </section>
+    </div>
+
+    <script>
+        const EN = {
+            title: 'Electronic — ESP32 Gesture Home',
+            lead: 'Gesture-controlled IoT with on-device ML and real-time web UI.',
+            s1h: 'System Architecture',
+            s1p: 'Device (ESP32 + MPU6050) → Server (Node.js + Socket.IO) → Front-end (HTML/JS). The device performs on-device inference and reports status; the server relays via REST & WebSocket; the UI reflects sensor and actuator states in real time.',
+            s2h: 'Data Collection',
+            s2p: 'Record predefined gestures (orbit, swing, tilt) with the IMU; generate samples using a sliding window; label manually; augment with crop/shift/noise to increase robustness.',
+            s3h: 'CNN Model Design',
+            s3p: 'Input is a 128×3 time-series window. A lightweight network with DepthwiseConv2D and dense layers outputs gesture classes via Softmax, balancing accuracy and footprint.',
+            s4h: 'Network',
+            s4p: 'Device reports /api/sensor periodically and /api/gesture on recognition; server exposes /api/led and /api/fan and broadcasts updates via io.emit(); the front-end listens to sensor/gesture/led/fan to update the UI instantly.',
+            s5h: 'UI/UX',
+            s5p: 'Responsive layout with a large clock, temperature/humidity status, and device toggles; gestures trigger immediate visual feedback and state changes; on mobile, the logo centers and secondary menus hide for clarity.',
+            vh: 'Video Demonstration',
+            vnote: 'If playback fails, check media/demo.mov (H.264/AAC in MOV is recommended).',
+            btn: '中文',
+            alts: ['System architecture', 'Data collection', 'Model design', 'Network', 'UI/UX']
+        };
+
+        const ZH = {
+            title: 'Electronic — ESP32 手势家居',
+            lead: '端侧推理 + 实时 Web 界面的手势物联网方案。',
+            s1h: '系统架构',
+            s1p: '设备端（ESP32 + MPU6050）→ 服务器端（Node.js + Socket.IO）→ 前端（HTML/JS）。设备本地推理并上报；服务器经 REST 与 WebSocket 中转；前端实时反映传感与设备状态。',
+            s2h: '数据采集',
+            s2p: '按预定义手势（环绕、挥动、倾斜）采集 IMU；用滑动窗口生成样本并标注；通过裁剪/平移/噪声做数据增强以提升鲁棒性。',
+            s3h: 'CNN 模型设计',
+            s3p: '输入为 128×3 时序窗口；采用 DepthwiseConv2D + 全连接的轻量网络，经 Softmax 输出手势类别，兼顾准确率与参数量。',
+            s4h: '网络通信',
+            s4p: '设备周期上报 /api/sensor，识别后上报 /api/gesture；服务器提供 /api/led 与 /api/fan，并通过 io.emit() 广播最新状态；前端监听 sensor/gesture/led/fan 事件即时更新界面。',
+            s5h: 'UI/UX 界面设计',
+            s5p: '响应式布局：大号时钟、温湿度与设备开关；手势触发立刻反馈背景与文本；移动端居中 Logo、隐藏次级菜单，交互更简洁。',
+            vh: '演示视频',
+            vnote: '若无法播放，请检查 media/demo.mov（建议 MOV 封装的 H.264/AAC）。',
+            btn: 'EN',
+            alts: ['系统架构', '数据采集', '模型设计', '网络通信', 'UI/UX']
+        };
+    </script>
+
+
+    <script>
+        /* ===== Images: 5 slides by default, supports filelist.json override ===== */
+        const IMG_BASE = 'img/';
+        let IMG_FILES = ['001.jpg', '002.jpg', '003.jpg', '004.jpg', '005.jpg'];
+
+        /* ===== i18n apply ===== */
+        const el = (id) => document.getElementById(id);
+        const keys = [
+            ['t-title', 'title'], ['t-lead', 'lead'],
+            ['t-1h', 's1h'], ['t-1p', 's1p'],
+            ['t-2h', 's2h'], ['t-2p', 's2p'],
+            ['t-3h', 's3h'], ['t-3p', 's3p'],
+            ['t-4h', 's4h'], ['t-4p', 's4p'],
+            ['t-5h', 's5h'], ['t-5p', 's5p'],
+            ['t-vh', 'vh'], ['t-vnote', 'vnote']
+        ];
+
+        function setText(map) {
+            for (const [id, key] of keys) {
+                const node = el(id);
+                if (!node) continue;
+                const val = map[key] || '';
+                (/[<&]/.test(val) ? (node.innerHTML = val) : (node.textContent = val));
+            }
+            el('langBtn').textContent = map.btn;
+            // update alts
+            for (let i = 1; i <= 5; i++) {
+                const img = el('img-' + i);
+                if (img) img.alt = map.alts[i - 1] || '';
+            }
+        }
+
+        /* ===== image list: optional filelist.json override ===== */
+        const isImg = n => /\.(png|jpe?g|webp|gif)$/i.test(n);
+        const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+        async function tryJsonList() {
+            try {
+                const r = await fetch(IMG_BASE + 'filelist.json', { cache: 'no-store' });
+                if (!r.ok) return null;
+                const arr = await r.json();
+                return Array.isArray(arr) ? arr.filter(isImg).sort(collator.compare) : null;
+            } catch { return null; }
+        }
+        function loadImages() {
+            for (let i = 1; i <= 5; i++) {
+                const img = el('img-' + i);
+                if (img) img.src = IMG_BASE + (IMG_FILES[i - 1] || ('0' + i + '.jpg').slice(-2) + '.jpg');
+            }
+        }
+
+        /* ===== boot ===== */
+        (async function () {
+            // default language = EN; persist choice
+            let lang = localStorage.getItem('lang') || 'en';
+            const apply = () => setText(lang === 'zh' ? ZH : EN);
+            apply();
+            el('langBtn').addEventListener('click', () => {
+                lang = (lang === 'en') ? 'zh' : 'en';
+                localStorage.setItem('lang', lang);
+                apply();
+            });
+
+            const list = await tryJsonList();
+            if (list && list.length >= 5) IMG_FILES = list.slice(0, 5);
+            loadImages();
+        })();
+    </script>
+
+    <script>
+        const BACK_FALLBACK_URL = '../index.html#slide-1'; // 需要就改
+        document.getElementById('backBtn')?.addEventListener('click', () => {
+            const canGoBack = history.length > 1 && document.referrer;
+            if (canGoBack) {
+                try {
+                    const ref = new URL(document.referrer);
+                    if (ref.origin === location.origin) { history.back(); return; }
+                } catch (_) { }
+            }
+            location.href = BACK_FALLBACK_URL;
+        });
+    </script>
+
+</body>
+
+</html>
