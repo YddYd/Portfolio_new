@@ -1,0 +1,1633 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=EB+Garamond:wght@400;500;600&family=Cinzel:wght@600&display=swap"
+    rel="stylesheet">
+  <title>Portfolio</title>
+  <style>
+    :root {
+      --bg: #161616;
+      --slide-gap: 6vh;
+    }
+
+    :root {
+      /* 全局字体栈：优先 Cormorant，退到 EB Garamond，再退到系统衬线 */
+      --font-display: "Cormorant Garamond", "EB Garamond", "Times New Roman", serif;
+      /* 如果页面会有中文内容，追加常见中文衬线以防断字 */
+      --font-cn-serif: "Songti SC", "Noto Serif SC", "Source Han Serif SC", "STZhongsong", "SimSun";
+    }
+
+    * {
+      box-sizing: border-box
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      background: var(--bg);
+      color: #e6e6e6;
+      font-family: ui-sans-serif, system-ui, Inter, Roboto, Helvetica, Arial;
+      overflow: hidden
+    }
+
+    /* 全站应用 */
+    html,
+    body {
+      font-family: var(--font-display), var(--font-cn-serif, serif);
+      font-weight: 600;
+      /* 导航/标题更接近示例的厚度 */
+      letter-spacing: .02em;
+      /* 略微松一点更典雅 */
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    .viewport {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden
+    }
+
+    /* 层级：粒子(2) < Slides(5) */
+    canvas.layer {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none
+    }
+
+    /* 幻灯（transform 全由阻尼驱动，禁用 CSS 过渡） */
+    .slides {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      z-index: 5;
+      transition: none !important;
+      will-change: transform;
+    }
+
+    .slide {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8vh 8vw
+    }
+
+    .slide:not(:last-child) {
+      margin-bottom: var(--slide-gap)
+    }
+
+    .slide-inner {
+      position: relative;
+      max-width: 1100px;
+      width: 100%
+    }
+
+    /* 第0页：仅叠图，随 slides 一起滑动 */
+    .hero-slide {
+      padding: 0
+    }
+
+    .hero-slide .hero-overlay {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      pointer-events: none;
+      z-index: 4;
+    }
+
+    /* 第1页：丝带画布就是该页的内容元素（需要鼠标事件 -> pointer-events:auto） */
+    .ribbon-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 4;
+      pointer-events: auto;
+      display: block;
+      /* 如不想影响页面手势，可按需设置 touch-action:none; */
+    }
+
+    :root {
+      --index-bottom: 50px;
+    }
+
+    /* ← 想靠上/靠下就改这里，支持 px/vh 等 */
+
+    /* 视窗固定底部索引条（全局可见） */
+    .site-index {
+      position: fixed;
+      left: 50%;
+      bottom: calc(var(--index-bottom) + env(safe-area-inset-bottom, 0px));
+      transform: translateX(-46%);
+      display: flex;
+      align-items: center;
+      gap: clamp(16px, 1vw, 56px);
+      z-index: 30;
+      /* 高于 slides/ribbon/particles */
+      user-select: none;
+      -webkit-user-select: none;
+      pointer-events: auto;
+    }
+
+    .site-index a {
+      color: #fff;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: clamp(14px, 1.6vw, 20px);
+      letter-spacing: .02em;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, .6);
+      opacity: .9;
+      transition: opacity .2s ease, transform .2s ease;
+    }
+
+    .site-index a:hover {
+      opacity: 1;
+      transform: translateY(-1px);
+    }
+
+    .site-index .logo-slot {
+      width: clamp(40px, 3.6vw, 60px);
+      height: clamp(40px, 3.6vw, 60px);
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      margin-inline: clamp(10px, 2.5vw, 28px);
+    }
+
+    .site-index .logo-slot img {
+      width: 70%;
+      height: 70%;
+      object-fit: contain;
+      display: block;
+    }
+
+    /* —— W-Bubbles on slide 2 —— */
+    .w-bubbles {
+      position: relative;
+      z-index: 6;
+      /* 高于 ribbon-canvas */
+      height: clamp(360px, 56vh, 640px);
+      margin-top: 12px;
+    }
+
+    .w-bubbles .bubble {
+      position: absolute;
+      width: var(--size, 110px);
+      height: var(--size, 110px);
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(120% 120% at 30% 20%, rgba(255, 255, 255, .18),
+          rgba(255, 255, 255, .06) 40%, rgba(255, 255, 255, .03) 60%, rgba(255, 255, 255, .02));
+      border: 1px solid rgba(255, 255, 255, .18);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, .28), inset 0 1px 8px rgba(255, 255, 255, .15);
+      user-select: none;
+      pointer-events: auto;
+      will-change: transform, opacity;
+    }
+
+    .w-bubbles .bubble::after {
+      /* 高光 */
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+      background: radial-gradient(90px 90px at 28% 24%, rgba(255, 255, 255, .32), rgba(255, 255, 255, 0) 60%);
+    }
+
+    .w-bubbles .title {
+      font-size: 14px;
+      letter-spacing: .02em;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity .25s ease, transform .25s ease;
+      text-align: center;
+      padding: 0 10px;
+    }
+
+    .w-bubbles .bubble[data-visible="1"] .title {
+      opacity: .95;
+      transform: translateY(0);
+    }
+
+    /* 图片层：铺满圆形，hover 轻微放大；标题在上层更清晰 */
+    .w-bubbles .bubble {
+      overflow: hidden;
+    }
+
+    /* 确保圆形裁剪 */
+    .w-bubbles .bubble .pic {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .w-bubbles .bubble .pic img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transform: scale(1.02);
+      /* 初始微缩放，避免边缘锯齿 */
+      transition: transform .6s cubic-bezier(.22, .9, .27, 1), filter .6s ease;
+      filter: saturate(.95) contrast(1.03);
+    }
+
+    .w-bubbles .bubble:hover .pic img {
+      transform: scale(1.08);
+    }
+
+    /* 轻微晕影 + 高光，提升立体感与标题可读性 */
+    .w-bubbles .bubble::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      z-index: 2;
+      pointer-events: none;
+      background:
+        radial-gradient(65% 65% at 65% 20%, rgba(255, 255, 255, .18), rgba(255, 255, 255, 0) 60%),
+        radial-gradient(120% 120% at 50% 65%, rgba(0, 0, 0, .22), rgba(0, 0, 0, 0) 55%);
+    }
+
+    /* 标题在最上层 */
+    .w-bubbles .title {
+      position: relative;
+      z-index: 3;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, .35);
+    }
+
+    /* —— Bubble darken overlay —— */
+    .w-bubbles .bubble {
+      overflow: hidden;
+    }
+
+    /* 确保圆形裁剪 */
+    .w-bubbles .bubble .shade {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+      z-index: 2;
+      /* pic=1, shade=2, title=3 */
+      /* 轻微中心偏亮、边缘更暗的遮罩，便于读字 */
+      background:
+        radial-gradient(70% 70% at 50% 45%, rgba(0, 0, 0, .18), rgba(0, 0, 0, .34) 70%, rgba(0, 0, 0, .42));
+      opacity: 0;
+      transition: opacity .35s cubic-bezier(.22, .9, .27, 1);
+    }
+
+    .w-bubbles .bubble[data-visible="1"] .shade {
+      opacity: .48;
+    }
+
+    /* hover 显示遮罩 */
+    .w-bubbles .bubble[data-visible="1"] .pic img {
+      filter: brightness(.72) saturate(.95) contrast(1.06);
+      /* 同步压暗一点 */
+    }
+
+    /* 让标题更醒目（如果已设置可忽略） */
+    .w-bubbles .title {
+      color: #fff;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, .45), 0 6px 18px rgba(0, 0, 0, .35);
+    }
+
+    /* —— Slide 3: About · 叠卡 —— */
+    .about-stack {
+      position: relative;
+      height: clamp(440px, 68vh, 760px);
+    }
+
+    .about-card {
+      --w: clamp(420px, 42vw, 480px);
+      --accent: #4973c5;
+      /* 每张可覆盖 */
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: var(--w);
+      aspect-ratio: 1 / 0.8;
+      /* 方形卡片 */
+      border-radius: 22px;
+      background: #1c1c1c;
+      border: 1px solid rgba(255, 255, 255, .12);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, .35);
+      overflow: hidden;
+      transform: translate(-50%, -50%) translate(var(--tx, 0), var(--ty, 0)) rotate(var(--rot, 0));
+      transition: transform .45s cubic-bezier(.22, .9, .27, 1),
+        box-shadow .3s ease;
+      will-change: transform;
+      z-index: 6;
+    }
+
+    .about-card:hover,
+    .about-card:focus-within {
+      z-index: 9;
+      transform: translate(-50%, -50%) translate(var(--tx, 0), var(--ty, 0)) rotate(var(--rot, 0)) scale(1.02);
+      box-shadow: 0 28px 70px rgba(0, 0, 0, .5);
+    }
+
+    /* 左图右文的 1:1 内部布局 */
+    .about-card .inner {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      height: 100%;
+    }
+
+    /* 图片：使用 CSS 变量 --img，缺图时有柔和占位 */
+    .about-card .pic {
+      position: relative;
+      background:
+        var(--img, linear-gradient(135deg, #2a2a2a, #1c1c1c));
+      background-size: cover;
+      background-position: center;
+      filter: saturate(.98) contrast(1.05);
+    }
+
+    .about-card:hover .pic {
+      transform: scale(1.02);
+      transition: transform .6s cubic-bezier(.22, .9, .27, 1);
+    }
+
+    /* 文字区 */
+    .about-card .body {
+      padding: clamp(14px, 2.2vw, 22px);
+      display: grid;
+      align-content: center;
+      gap: .55rem;
+    }
+
+    .about-card .overline {
+      font-size: .9rem;
+      letter-spacing: .02em;
+      opacity: .75;
+      margin: 0;
+    }
+
+    .about-card h3 {
+      font-size: clamp(20px, 2.4vw, 28px);
+      margin: 0;
+      line-height: 1.15;
+    }
+
+    .about-card .desc {
+      opacity: .85;
+      line-height: 1.55;
+      margin: .2rem 0 0 0;
+    }
+
+    /* 角标/强调条（可选） */
+    .about-card::after {
+      content: "";
+      position: absolute;
+      inset: auto 0 0 auto;
+      width: 60%;
+      height: 6px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+      opacity: .6;
+    }
+
+    /* 三张卡片的初始叠放位姿（可按需微调） */
+    .about-card.c1 {
+      --tx: -20%;
+      --ty: -20%;
+      --rot: -1.6deg;
+      --accent: #4973c5;
+    }
+
+    .about-card.c2 {
+      --tx: 45%;
+      --ty: -35%;
+      --rot: 1.2deg;
+      --accent: #f3b301;
+    }
+
+    .about-card.c3 {
+      --tx: 18%;
+      --ty: 25%;
+      --rot: .6deg;
+      --accent: #9aa1a8;
+    }
+
+    /* 小屏：取消重叠，纵向排布 */
+    @media (max-width: 760px) {
+      .about-stack {
+        display: grid;
+        gap: 18px;
+        height: auto;
+      }
+
+      .about-card {
+        position: static;
+        transform: none !important;
+        width: 100%;
+        aspect-ratio: auto;
+      }
+
+      .about-card .inner {
+        grid-template-columns: 1fr;
+        /* 图在上、文在下 */
+        min-height: 320px;
+      }
+
+      .about-card .pic {
+        min-height: 42vw;
+      }
+    }
+
+    /* === Slide3 · Card3 文字版 === */
+    .about-card.text-only .inner {
+      display: grid;
+      grid-template-columns: 1fr;
+      /* 不要图片，单列文字 */
+    }
+
+    .about-card.text-only .body {
+      padding: clamp(18px, 2.2vw, 24px);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      /* 文字顶部，段落撑开，logo 固定在底部 */
+      gap: .6rem;
+      align-content: start;
+    }
+
+    .about-card.text-only h3 {
+      font-size: clamp(28px, 3.6vw, 34px);
+      letter-spacing: .02em;
+    }
+
+    /* 社交 logo 按钮（胶囊形） */
+    .social-chips {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      margin-top: .4rem;
+    }
+
+    .chip {
+      --bg: #2a2a2a;
+      --ico: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 56px;
+      height: 36px;
+      border-radius: 999px;
+      background: var(--bg);
+      color: var(--ico);
+      border: 1px solid rgba(255, 255, 255, .08);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, .25);
+      text-decoration: none;
+      transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+    }
+
+    .chip:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, .35);
+    }
+
+    .chip svg {
+      width: 18px;
+      height: 18px;
+      display: block;
+    }
+
+    /* 品牌配色 */
+    .chip--li {
+      --bg: #0a66c2;
+      --ico: #f3b301;
+    }
+
+    /* LinkedIn：蓝底金色图标 */
+    .chip--ig {
+      --bg: linear-gradient(135deg, #ff3a55, #ff00a8 55%, #ffb400);
+      --ico: #fff;
+    }
+
+    .chip--mail {
+      --bg: #fff;
+      --ico: #f3b301;
+      border-color: rgba(0, 0, 0, .08);
+    }
+
+    @media (max-width:760px) {
+      .chip {
+        width: 54px;
+        height: 34px;
+      }
+
+      .social-chips {
+        gap: 12px;
+      }
+    }
+
+    /* —— Language toggle —— */
+    .lang-switch {
+      position: fixed;
+      top: max(14px, env(safe-area-inset-top));
+      right: max(14px, env(safe-area-inset-right));
+      z-index: 40;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(28, 28, 28, .80);
+      border: 1px solid rgba(255, 255, 255, .12);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, .35);
+      font-size: 12px;
+      letter-spacing: .02em;
+      user-select: none;
+      cursor: pointer;
+      -webkit-backdrop-filter: blur(4px);
+      backdrop-filter: blur(4px);
+    }
+
+    .lang-switch .opt {
+      opacity: .65;
+      transition: opacity .2s ease, transform .2s ease;
+    }
+
+    .lang-switch .sep {
+      opacity: .35
+    }
+
+    .lang-switch.is-zh .opt.zh,
+    .lang-switch:not(.is-zh) .opt.en {
+      opacity: 1;
+      transform: translateY(-1px);
+    }
+
+    .lang-switch:hover .opt {
+      opacity: .85
+    }
+
+    @media (max-width:760px) {
+      .lang-switch {
+        padding: 6px 9px;
+        font-size: 11px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="viewport" id="viewport">
+    <!-- 粒子背景（固定层） -->
+    <canvas id="orbits" class="layer"></canvas>
+
+    <!-- 幻灯：0=首页叠图；1=丝带页；2=其它内容示例 -->
+    <div class="slides" id="slides">
+      <!-- 第0页：只有叠图 -->
+      <section class="slide hero-slide">
+        <img class="hero-overlay" src="img/surface.png" alt="" />
+      </section>
+
+      <!-- 第1页：丝带所在页 -->
+      <section class="slide">
+        <canvas id="ribbon" class="ribbon-canvas"></canvas>
+        <div class="slide-inner" style="position:relative; z-index:5">
+          <div class="w-bubbles" id="wBubbles">
+            <a href="cnnGesture/cnnGes.html" target="_self" rel="noopener">
+              <div class="bubble" data-i18n-title="bubbles.cnn" data-title="CNN based Embedded Perception"
+                data-img="img/cover/Electronic.jpg"></div>
+            </a>
+            <a href="ink/ink.html" target="_self" rel="noopener">
+              <div class="bubble" data-i18n-title="bubbles.ink" data-title="Ink Sketches / Design"
+                data-img="img/cover/Painting.jpg"></div>
+            </a>
+            <a href="webGL/webgl.html" target="_self" rel="noopener">
+              <div class="bubble" data-i18n-title="bubbles.webgl" data-title="WebGL Design"
+                data-img="img/cover/SpecialEffect.png"></div>
+            </a>
+            <a href="da/da.html" target="_self" rel="noopener">
+              <div class="bubble" data-i18n-title="bubbles.da" data-title="Data Analysis"
+                data-img="img/cover/TableauTable.png"></div>
+            </a>
+            <a href="ixd/interactive-design.html" target="_self" rel="noopener">
+              <div class="bubble" data-i18n-title="bubbles.ixd" data-title="Interactive Design"
+                data-img="img/cover/InteractiveDesign.png"></div>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide" id="about">
+        <div class="slide-inner">
+          <div class="about-stack">
+
+            <!-- card 3：纯文字 + 底部 logo -->
+            <article class="about-card c3 text-only">
+              <div class="inner">
+                <div class="body">
+                  <p class="overline" data-i18n="card3.overline">Ding</p>
+                  <h3 data-i18n="card3.title">Yu</h3>
+                  <p class="desc" data-i18n="card3.desc">
+                    Designer by trade, tinkerer by habit. I sketch interfaces, solder circuits, write code, and train
+                    models — bridging the gap between tactile hardware and intelligent software. Whether I'm debugging a
+                    sensor, refining a user flow, or coaxing a model to understand nuance, I care about craft, clarity,
+                    and making complex systems feel effortless.
+                  </p>
+
+                  <!-- 社交/联系方式 -->
+                  <div class="social-chips" aria-label="social links">
+                    <!-- LinkedIn -->
+                    <a class="chip chip--li" href="https://www.linkedin.com/in/yu-ding-041229222/" target="_blank"
+                      rel="noopener" aria-label="LinkedIn">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <!-- “i” -->
+                        <circle cx="8" cy="8" r="1.2"></circle>
+                        <line x1="8" y1="11" x2="8" y2="16"></line>
+                        <!-- “n” -->
+                        <path d="M12 16v-3a2 2 0 0 1 4 0v3"></path>
+                      </svg>
+                    </a>
+
+                    <!-- Instagram -->
+                    <!-- <a class="chip chip--ig" href="https://www.instagram.com/your-id" target="_blank" rel="noopener"
+                      aria-label="Instagram">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" aria-hidden="true">
+                        <rect x="3" y="3" width="18" height="18" rx="4"></rect>
+                        <circle cx="12" cy="12" r="4"></circle>
+                        <circle cx="18" cy="6" r="1.4"></circle>
+                      </svg>
+                    </a> -->
+
+                    <!-- Email -->
+                    <!-- <a class="chip chip--mail" href="mailto:you@example.com" aria-label="Email">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" aria-hidden="true">
+                        <rect x="3" y="6" width="18" height="12" rx="2"></rect>
+                        <polyline points="3,7 12,13 21,7"></polyline>
+                      </svg>
+                    </a> -->
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <!-- card 2 -->
+            <article class="about-card c2" style="--img:url('img/about/ding.jpg')">
+              <div class="inner">
+                <div class="pic" aria-hidden="true"></div>
+                <div class="body">
+                  <p class="overline" data-i18n="card2.overline">This is my faithful servant.</p>
+                  <h3 data-i18n="card2.title">Ding</h3>
+                  <p class="desc" data-i18n="card2.desc">He is reliable, although a bit lazy at times.</p>
+                </div>
+              </div>
+            </article>
+
+
+            <!-- card 1 -->
+            <article class="about-card c1" style="--img:url('img/about/amber.jpg')">
+              <div class="inner">
+                <div class="pic" aria-hidden="true"></div>
+                <div class="body">
+                  <p class="overline" data-i18n="card1.overline">This is me.</p>
+                  <h3 data-i18n="card1.title">Amber</h3>
+                  <p class="desc" data-i18n="card1.desc">An elegant and decent cat.</p>
+                </div>
+              </div>
+            </article>
+
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- 视窗固定的索引条（全站可见；放这里，和 .slides 同级） -->
+    <nav id="siteIndex" class="site-index" aria-label="Site index">
+      <a href="#slide-1" class="item" data-i18n="nav.project">Project</a>
+      <a class="logo-slot" href="#slide-0" aria-label="Logo"><img src="img/logoW.png" alt="" /></a>
+      <a href="#slide-2" class="item" data-i18n="nav.about">About</a>
+    </nav>
+
+    <div id="langSwitch" class="lang-switch" aria-label="Switch language">
+      <span class="opt zh">中</span><span class="sep">/</span><span class="opt en">EN</span>
+    </div>
+
+
+
+    <script>
+      /* ===================== 系统“减少动态”自适配（保留占位） ===================== */
+      window.REDUCED_MOTION = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      function setHomeDecor() {/* no-op：丝带页内固定，不再由页索引强制隐藏 */ }
+    </script>
+
+    <script>
+      /* ==========================================================================
+         DampedSlides v2.1 — 垂直分页 + 弹簧阻尼过渡 + 累计滚轮行程
+         - 兼容你的结构：#slides 纵向、--slide-gap(vh)、.site-index 固定底部
+         - 目标/当前索引分离；支持键盘、触控轻扫、点击空白翻页、hash 同步
+         - 暴露 cfg，可在运行时动态调参（见文末“调参指南”）
+         ========================================================================== */
+      (function () {
+        if (window.DampedSlides && window.DampedSlides.__alive) return; // 避免重复装载
+
+        const root = document.getElementById('slides');
+        if (!root) { console.warn('[DampedSlides] #slides not found'); return; }
+
+        const cfg = {
+          // 物理参数（弹簧）
+          stiffness: 140,   // 刚性（大=更紧、更快收敛）
+          damping: 18,      // 阻尼（大=更黏、更不弹）
+          mass: 1,          // 质量（大=更肉）
+
+          // 静止判定（到位阈值）
+          restEpsilonPos: 0.6, // 位置接近阈值(px)
+          restEpsilonVel: 0.25, // 速度接近阈值(px/s)
+
+          // 触控/键盘
+          swipeDistancePx: 160, // 轻扫触发位移阈值
+          swipeTimeMs: 600,     // 轻扫最大时长
+          keyRepeatMs: 180,     // 键盘重复的最小时距
+
+          // 累计滚轮翻页（重点）
+          wheel: {
+            pxPerPage: 200,    // 每翻一页所需累计“像素等价”行程（调大=更稳重）
+            resetMs: 420,       // 超过该间隔未继续滚动则清零累计
+            maxBurstPages: 1,   // 单次最多跨页数（1 可以彻底避免“一下到底”）
+            invert: 1           // 方向反转，用 -1 如需反向
+          },
+
+          // 交互与行为
+          clickToNavigate: true,                // 点击空白区域也可翻页（上半屏上一页，下半屏下一页）
+          ignoreClickSelectors: '.site-index, .w-bubbles, .ribbon-canvas, .about-stack, .lang-switch',
+          respectReducedMotion: true            // 开启“系统减少动效”时进行瞬移
+        };
+
+        // 内部状态
+        let activeIndex = 0;     // 已达成的页
+        let targetIndex = 0;     // 目标页（可被热切）
+        let y = 0, v = 0;        // 当前位置/速度（像素）
+        let targetY = 0;         // 目标位置（像素）
+        let rafId = 0, tPrev = 0;
+
+        // 工具函数
+        const pxPerVh = () => (window.visualViewport ? window.visualViewport.height : innerHeight) / 100;
+        const gapVh = () => {
+          const val = getComputedStyle(document.documentElement).getPropertyValue('--slide-gap').trim();
+          const n = parseFloat(val.replace('vh', ''));
+          return Number.isFinite(n) ? n : 0;
+        };
+        const total = () => root.children.length;
+        const computeTargetY = (i) => -(i * (100 + gapVh())) * pxPerVh();
+        const readHashIndex = () => {
+          const m = (location.hash || '').match(/^#slide-(\d+)$/);
+          const i = m ? +m[1] : 0; return clampIndex(i);
+        };
+        const writeHash = (i) => {
+          // 仅在变化时写入，避免污染历史栈
+          const h = `#slide-${i}`;
+          if (location.hash !== h) history.replaceState(null, '', h);
+        };
+        const applyTransform = (px) => { root.style.transform = `translate3d(0, ${px}px, 0)`; };
+        const clampIndex = (i) => Math.max(0, Math.min(total() - 1, i));
+
+        // 目标设置
+        function setTarget(i, instant = false) {
+          targetIndex = clampIndex(i);
+          targetY = computeTargetY(targetIndex);
+
+          // 系统“减少动效”尊重
+          const prefersReduced = cfg.respectReducedMotion &&
+            matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+          if (instant || prefersReduced) {
+            y = targetY; v = 0; applyTransform(y);
+            commitArrive();
+            return;
+          }
+          if (!rafId) rafId = requestAnimationFrame(frame);
+        }
+
+        function commitArrive() {
+          if (activeIndex !== targetIndex) {
+            activeIndex = targetIndex;
+            writeHash(activeIndex);
+            // 供你首页装饰用（若存在）
+            if (typeof window.setHomeDecor === 'function') {
+              try { window.setHomeDecor(activeIndex === 0); } catch (_) { }
+            }
+            // 触发一个事件，外部可监听 slide 变化
+            root.dispatchEvent(new CustomEvent('slides:change', { detail: { index: activeIndex } }));
+          }
+        }
+
+        // 动画主循环（弹簧）
+        function frame(now) {
+          rafId = requestAnimationFrame(frame);
+          const dt = Math.min(0.05, Math.max(1 / 120, tPrev ? (now - tPrev) / 1000 : 1 / 60));
+          tPrev = now;
+
+          const x = y - targetY;                      // 位移误差
+          const a = (-cfg.stiffness * x - cfg.damping * v) / cfg.mass; // 加速度
+          v += a * dt;
+          y += v * dt;
+          applyTransform(y);
+
+          if (Math.abs(x) < cfg.restEpsilonPos && Math.abs(v) < cfg.restEpsilonVel) {
+            y = targetY; v = 0; applyTransform(y);
+            commitArrive();
+            cancelAnimationFrame(rafId); rafId = 0; tPrev = 0;
+          }
+        }
+
+        // —— 初始化：从 hash 恢复
+        activeIndex = readHashIndex();
+        targetIndex = activeIndex;
+        setTarget(activeIndex, true);
+
+        // —— 响应 resize（包括移动端地址栏出现/隐藏）
+        addEventListener('resize', () => {
+          targetY = computeTargetY(targetIndex);
+          if (!rafId) { y = targetY; applyTransform(y); }
+        });
+
+        // —— 响应 hash（外部导航/原生返回）
+        addEventListener('hashchange', () => {
+          const i = readHashIndex();
+          if (i !== targetIndex) setTarget(i);
+        });
+
+        // =========================
+        // 交互：滚轮（累计制）
+        // =========================
+        let wheelBucket = 0, wheelLastT = 0, wheelLastDir = 0;
+
+        function normalizeWheel(e) {
+          // 将 delta 统一换算为像素等价
+          const LINE = 1, PAGE = 2;
+          let dy = e.deltaY;
+          if (e.deltaMode === LINE) dy *= 16;          // 经验换算：16px/行
+          else if (e.deltaMode === PAGE) dy *= innerHeight;
+          return dy;
+        }
+
+        addEventListener('wheel', (e) => {
+          const now = performance.now();
+          const dy = normalizeWheel(e) * cfg.wheel.invert;
+          const dir = Math.sign(dy) || wheelLastDir || 1;
+
+          // 时间过久或方向改变 => 清桶，更可控
+          if (now - wheelLastT > cfg.wheel.resetMs || (wheelLastDir && dir !== wheelLastDir)) {
+            wheelBucket = 0;
+          }
+          wheelBucket += dy;
+          wheelLastT = now;
+          wheelLastDir = dir;
+
+          const threshold = cfg.wheel.pxPerPage;
+          let steps = Math.trunc(Math.abs(wheelBucket) / threshold) * Math.sign(wheelBucket);
+
+          if (steps !== 0) {
+            const capped = Math.max(-cfg.wheel.maxBurstPages, Math.min(cfg.wheel.maxBurstPages, steps));
+            goDelta(capped);
+            wheelBucket -= capped * threshold; // 扣除已消耗的累计
+          }
+        }, { passive: true });
+
+        // =========================
+        // 交互：键盘
+        // =========================
+        let keyLockUntil = 0;
+        addEventListener('keydown', (e) => {
+          const now = performance.now(); if (now < keyLockUntil) return;
+          if (e.key === 'ArrowDown' || e.key === 'PageDown') { keyLockUntil = now + cfg.keyRepeatMs; goDelta(+1); }
+          else if (e.key === 'ArrowUp' || e.key === 'PageUp') { keyLockUntil = now + cfg.keyRepeatMs; goDelta(-1); }
+          else if (e.key === 'Home') { keyLockUntil = now + cfg.keyRepeatMs; go(0); }
+          else if (e.key === 'End') { keyLockUntil = now + cfg.keyRepeatMs; go(total() - 1); }
+        });
+
+        // =========================
+        // 交互：触控轻扫
+        // =========================
+        let touchStartY = null, touchStartT = 0;
+        addEventListener('touchstart', (e) => {
+          if (!e.touches || !e.touches[0]) return;
+          touchStartY = e.touches[0].clientY;
+          touchStartT = performance.now();
+        }, { passive: true });
+
+        addEventListener('touchend', (e) => {
+          if (touchStartY == null) return;
+          const y2 = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientY : touchStartY;
+          const dy = y2 - touchStartY, dt = performance.now() - touchStartT;
+          touchStartY = null;
+          if (Math.abs(dy) > cfg.swipeDistancePx && dt < cfg.swipeTimeMs) {
+            goDelta(dy < 0 ? +1 : -1);
+          }
+        }, { passive: true });
+
+        // =========================
+        // 交互：点击空白翻页
+        // =========================
+        if (cfg.clickToNavigate) {
+          addEventListener('click', (e) => {
+            if (cfg.ignoreClickSelectors && e.target.closest(cfg.ignoreClickSelectors)) return;
+            // 顶部 40% 上一页；底部 60% 下一页（你也可以改成 50/50）
+            if (e.clientY > innerHeight * 0.6) goDelta(+1);
+            else if (e.clientY < innerHeight * 0.4) goDelta(-1);
+          });
+        }
+
+        // 导航 API
+        function go(i, instant = false) { setTarget(i, instant); }
+        function goDelta(d, instant = false) { setTarget(targetIndex + d, instant); }
+        function snap() { setTarget(targetIndex, true); }
+
+        // 暴露全局
+        window.DampedSlides = {
+          __alive: true,
+          get index() { return activeIndex; },
+          get targetIndex() { return targetIndex; },
+          go, goDelta, snap, cfg
+        };
+
+        // 一些轻量的默认 CSS 建议（可选）
+        // document.documentElement.style.setProperty('overscroll-behavior', 'none');
+      })();
+    </script>
+
+
+
+    <script>
+      /* =================== OrbitsFX：金属颗粒（背景） =================== */
+      const OrbitsFX = (() => {
+        const canvas = document.getElementById('orbits'); const ctx = canvas.getContext('2d', { alpha: true });
+        let W = 0, H = 0, DPR = 1, lastT = performance.now();
+        const CFG = {
+          count: 60, baseRadius: 1.5, radiusMassK: 2,
+          trailEnabled: false, trailFade: 0.12,
+          G: 20.0, softening: 26, pairRadiusLimit: 420,
+          mouseKForce: 0.7, mouseTanhScale: 280, mouseMaxForce: 2.2,
+          minSpeedPxPerSec: 32, minClampJitter: 0.5,
+          drag: 0.0015, jitterForce: 0.0005,
+          centerKeep: 0.00008, centerRadius: 0.8,
+          alphaNear: 1, alphaFar: 0.5, alphaGamma: 1.1, alphaFarDistRatio: 0.75
+        };
+        const GOLD = { light: '#FFE9AC', mid: '#F7B43C', deep: '#8B5A22', rim: '#FFF6D0' };
+        const particles = []; const cursor = { x: 0, y: 0 };
+        let minSpeedT = 0, sprite = null, spriteSize = 128;
+
+        try { const saved = localStorage.getItem('orbits_trail'); if (saved != null) CFG.trailEnabled = saved === '1'; } catch (_) { }
+        if (window.REDUCED_MOTION) CFG.trailEnabled = false;
+
+        function updateUnits() { minSpeedT = (CFG.minSpeedPxPerSec * (DPR)) / 1000; }
+        function resize() {
+          DPR = Math.min(devicePixelRatio || 1, 2);
+          W = canvas.width = Math.floor(innerWidth * DPR); H = canvas.height = Math.floor(innerHeight * DPR);
+          canvas.style.width = innerWidth + 'px'; canvas.style.height = innerHeight + 'px';
+          updateUnits(); buildGoldSprite(); ctx.clearRect(0, 0, W, H);
+        }
+        resize(); addEventListener('resize', resize);
+
+        function initParticles() {
+          particles.length = 0;
+          for (let i = 0; i < CFG.count; i++) {
+            const m = 0.5 + Math.pow(Math.random(), 1.5) * 1.5;
+            const x = Math.random() * W, y = Math.random() * H;
+            const vx = (Math.random() - 0.5) * 0.25, vy = (Math.random() - 0.5) * 0.25;
+            const spin = Math.random() < 0.5 ? -1 : 1;
+            particles.push({ x, y, vx, vy, ax: 0, ay: 0, m, spin });
+          }
+          cursor.x = W * 0.5; cursor.y = H * 0.5;
+        }
+        initParticles();
+
+        function buildGoldSprite() {
+          const S = spriteSize * DPR | 0; const off = document.createElement('canvas'); off.width = off.height = S; const g = off.getContext('2d');
+          g.clearRect(0, 0, S, S);
+          let grad = g.createRadialGradient(S * 0.45, S * 0.40, S * 0.05, S * 0.50, S * 0.50, S * 0.50);
+          grad.addColorStop(0.00, GOLD.light); grad.addColorStop(0.55, GOLD.mid); grad.addColorStop(1.00, GOLD.deep);
+          g.fillStyle = grad; g.beginPath(); g.arc(S / 2, S / 2, S * 0.49, 0, Math.PI * 2); g.fill();
+          g.globalCompositeOperation = 'multiply';
+          grad = g.createRadialGradient(S * 0.72, S * 0.72, S * 0.12, S * 0.72, S * 0.72, S * 0.60);
+          grad.addColorStop(0, 'rgba(0,0,0,0)'); grad.addColorStop(1, 'rgba(0,0,0,0.55)');
+          g.fillStyle = grad; g.beginPath(); g.arc(S / 2, S / 2, S * 0.5, 0, Math.PI * 2); g.fill();
+          g.globalCompositeOperation = 'screen';
+          grad = g.createRadialGradient(S / 2, S / 2, S * 0.30, S / 2, S / 2, S * 0.49);
+          grad.addColorStop(0, 'rgba(255,255,255,0.00)'); grad.addColorStop(1, 'rgba(255,255,230,0.24)');
+          g.fillStyle = grad; g.beginPath(); g.arc(S / 2, S / 2, S * 0.49, 0, Math.PI * 2); g.fill();
+          grad = g.createRadialGradient(S * 0.30, S * 0.26, 0, S * 0.30, S * 0.26, S * 0.20);
+          grad.addColorStop(0, 'rgba(255,255,255,1)'); grad.addColorStop(1, 'rgba(255,255,255,0)');
+          g.fillStyle = grad; g.beginPath(); g.arc(S / 2, S / 2, S * 0.22, 0, Math.PI * 2); g.fill();
+          g.globalCompositeOperation = 'source-over';
+          sprite = off;
+        }
+
+        function accumulateForces() {
+          const soft2 = (CFG.softening * DPR) ** 2, limit2 = (CFG.pairRadiusLimit * DPR) ** 2;
+          for (const p of particles) { p.ax = 0; p.ay = 0; }
+          for (let i = 0; i < particles.length; i++) {
+            const pi = particles[i];
+            for (let j = i + 1; j < particles.length; j++) {
+              const pj = particles[j];
+              const dx = pj.x - pi.x, dy = pj.y - pi.y, d2 = dx * dx + dy * dy; if (d2 > limit2) continue;
+              const inv = 1 / Math.sqrt(d2 + soft2), inv3 = inv * inv * inv;
+              const F = CFG.G * pi.m * pj.m * inv3, Fx = dx * F, Fy = dy * F;
+              pi.ax += Fx / pi.m; pi.ay += Fy / pi.m; pj.ax -= Fx / pj.m; pj.ay -= Fy / pj.m;
+            }
+          }
+          const mx = cursor.x, my = cursor.y;
+          for (const p of particles) {
+            const dx = mx - p.x, dy = my - p.y, dist = Math.hypot(dx, dy) || 1;
+            const gain = Math.tanh(dist / (CFG.mouseTanhScale * DPR));
+            const Fm = Math.min(CFG.mouseMaxForce, (CFG.mouseKForce * dist) * gain);
+            p.ax += (dx / dist) * (Fm / p.m); p.ay += (dy / dist) * (Fm / p.m);
+            const Fj = CFG.jitterForce / Math.sqrt(p.m); p.ax += (Math.random() - 0.5) * 2 * Fj; p.ay += (Math.random() - 0.5) * 2 * Fj;
+            const cx = W * 0.5, cy = H * 0.5, dcx = cx - p.x, dcy = cy - p.y, dcen = Math.hypot(dcx, dcy), th = Math.min(W, H) * 0.5 * CFG.centerRadius;
+            if (dcen > th) { const Fk = CFG.centerKeep * dcen; p.ax += (dcx / dcen) * (Fk / p.m); p.ay += (dcy / dcen) * (Fk / p.m); }
+          }
+        }
+
+        function basisRT(p) {
+          const dx = cursor.x - p.x, dy = cursor.y - p.y, d = Math.hypot(dx, dy);
+          if (d < 1e-6) {
+            const v = Math.hypot(p.vx, p.vy);
+            if (v > 1e-6) { const rx = p.vx / v, ry = p.vy / v; let tx = -ry, ty = rx; if (p.spin < 0) { tx = -tx; ty = -ty; } return { rx, ry, tx, ty }; }
+            const a = Math.random() * Math.PI * 2; const rx = Math.cos(a), ry = Math.sin(a); let tx = -ry, ty = rx; if (p.spin < 0) { tx = -tx; ty = -ty; } return { rx, ry, tx, ty };
+          }
+          const rx = dx / d, ry = dy / d; let tx = -ry, ty = rx; if (p.spin < 0) { tx = -tx; ty = -ty; } return { rx, ry, tx, ty };
+        }
+        function enforceMinTangential(p) {
+          const { rx, ry, tx, ty } = basisRT(p);
+          const vt = p.vx * tx + p.vy * ty, vr = p.vx * rx + p.vy * ry;
+          const jitter = (Math.random() - 0.5) * 0.5, c = Math.cos(jitter), s = Math.sin(jitter);
+          const txj = tx * c - ty * s, tyj = tx * s + ty * c;
+          if (Math.abs(vt) < minSpeedT) { const vtT = minSpeedT; p.vx = vtT * txj + vr * rx; p.vy = vtT * tyj + vr * ry; }
+          else { p.vx = vt * txj + vr * rx; p.vy = vt * tyj + vr * ry; }
+        }
+
+        function loop() {
+          requestAnimationFrame(loop);
+          const now = performance.now(); let dt = now - lastT; lastT = now; dt = Math.min(33, Math.max(8, dt)); const dtSec = dt / 1000;
+
+          if (CFG.trailEnabled) { ctx.globalCompositeOperation = 'destination-out'; ctx.globalAlpha = CFG.trailFade; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); }
+          else ctx.clearRect(0, 0, W, H);
+
+          accumulateForces();
+
+          for (const p of particles) {
+            const drag = (CFG.drag / Math.sqrt(p.m)) * dt; p.vx *= (1 - drag); p.vy *= (1 - drag);
+            p.vx += p.ax * dt; p.vy += p.ay * dt;
+            enforceMinTangential(p);
+            p.x += p.vx * dtSec; p.y += p.vy * dtSec;
+            if (p.x < -50) p.x = W + 50; if (p.x > W + 50) p.x = -50;
+            if (p.y < -50) p.y = H + 50; if (p.y > H + 50) p.y = -50;
+          }
+
+          ctx.globalCompositeOperation = 'source-over';
+          const far = Math.min(W, H) * CFG.alphaFarDistRatio;
+          for (const p of particles) {
+            const dx = cursor.x - p.x, dy = cursor.y - p.y, dist = Math.hypot(dx, dy), t = Math.max(0, Math.min(1, dist / far));
+            const alpha = CFG.alphaFar + (CFG.alphaNear - CFG.alphaFar) * Math.pow(1 - t, CFG.alphaGamma);
+            ctx.globalAlpha = alpha;
+            const size = CFG.baseRadius * (1 + CFG.radiusMassK * (Math.sqrt(p.m) - 1)) * DPR;
+            ctx.drawImage(sprite, p.x - size, p.y - size, size * 2, size * 2);
+          }
+          ctx.globalAlpha = 1;
+        }
+
+        function start() { lastT = performance.now(); loop(); }
+        addEventListener('mousemove', e => { const nx = e.clientX * DPR, ny = e.clientY * DPR; cursor.x = nx; cursor.y = ny; }, { passive: true });
+        addEventListener('touchmove', e => { const t = e.touches[0]; if (!t) return; const nx = t.clientX * DPR, ny = t.clientY * DPR; cursor.x = nx; cursor.y = ny; }, { passive: true });
+        start();
+
+        window.toggleOrbitsTrail = function (on) { CFG.trailEnabled = !!on; try { localStorage.setItem('orbits_trail', on ? '1' : '0'); } catch (_) { } };
+        return { cfg: CFG };
+      })();
+    </script>
+
+    <script>
+      /* ===================== RibbonGL（固定在第2页）+ 鼠标扰动 + 三层分离 + 每层独立飘动 ===================== */
+      function createRibbonGL(canvas, userCfg) {
+        const gl = canvas.getContext('webgl2', { alpha: true, antialias: true, premultipliedAlpha: true });
+        if (!gl) { console.warn('[RibbonGL] WebGL2 not available'); return { ctrl: { cfg: {}, refresh() { }, start() { }, stop() { } } }; }
+
+        // 配置：在你的基础上增加 layers[i].motion（每层独立的 speed/amp/freq/phase/shape）
+        const cfg = Object.assign({
+          segments: 72,
+          curve: 0.36,
+          widthProfile: { base: 3, gain: 2 },
+          anchorNDC: { ax: -0.1, ay: 0.5, bx: 1.1, by: 0.5 },
+          layers: [
+            {
+              width: 54, alpha: 0.26, colors: ['#FFF4CF', '#F2C466', '#C8903C', '#7B4B1B'],
+              motion: { ampMul: 1.10, speedMul: 0.85, freqMul: 0.90, phase: 0.0, shapePow: 1.4 }
+            },
+            {
+              width: 44, alpha: 0.20, colors: ['#FFF8E1', '#E9BF74', '#BE873A', '#6E3F17'],
+              motion: { ampMul: 0.95, speedMul: 1.00, freqMul: 1.00, phase: 1.2, shapePow: 1.6 }
+            },
+            {
+              width: 36, alpha: 0.16, colors: ['#FFFFFF', '#DFB66D', '#B47E35', '#623612'],
+              motion: { ampMul: 1.25, speedMul: 1.25, freqMul: 1.15, phase: 2.4, shapePow: 1.2 }
+            },
+          ],
+          flowSpeed: 0.52,   // 公共基础流速（每层在此基础上乘以 speedMul）
+          waveAmp: 12,     // 公共基础振幅（每层在此基础上乘以 ampMul）
+          layerOffsetPx: 20,
+          edge: { width: 0.30, gamma: 2.0 },
+          hover: { active: true, radiusPx: 120, forceGain: 0, stiffness: 28, damping: 20, couple: 220 }
+        }, userCfg || {});
+
+        const VS = `#version 300 es
+  precision highp float;
+  layout(location=0) in vec2 a_xy;
+  layout(location=1) in vec2 a_uv;
+  uniform vec2 u_res;
+  out vec2 v_uv;
+  void main(){
+    vec2 p = a_xy / u_res * 2.0 - 1.0;
+    p.y = -p.y;
+    gl_Position = vec4(p,0.0,1.0);
+    v_uv = a_uv;
+  }`;
+        const FS = `#version 300 es
+  precision highp float;
+  in vec2 v_uv;
+  out vec4 o;
+  uniform float u_alpha;
+  uniform vec4 u_c0,u_c1,u_c2,u_c3;
+  uniform float u_edgeW;
+  uniform float u_edgeGamma;
+  void main(){
+    vec3 col = mix(u_c0.rgb, u_c1.rgb, smoothstep(0.0,0.40,v_uv.x));
+    col = mix(col, u_c2.rgb, smoothstep(0.40,0.75,v_uv.x));
+    col = mix(col, u_c3.rgb, smoothstep(0.75,1.00,v_uv.x));
+    float d  = 1.0 - abs(v_uv.y);
+    float aa = pow(clamp(d / u_edgeW, 0.0, 1.0), u_edgeGamma);
+    float highlight = exp(-pow((v_uv.y-0.35)/0.18,2.0))*0.55;
+    float innerShadow = smoothstep(-0.95,-0.25,v_uv.y)*0.28;
+    col += highlight;
+    col *= (1.0 - innerShadow);
+    o = vec4(col, aa * u_alpha);
+  }`;
+
+        function compile(type, src) {
+          const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+          if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw gl.getShaderInfoLog(s); return s;
+        }
+        const prog = gl.createProgram();
+        gl.attachShader(prog, compile(gl.VERTEX_SHADER, VS));
+        gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FS));
+        gl.linkProgram(prog);
+        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw gl.getProgramInfoLog(prog);
+        gl.useProgram(prog);
+
+        const U = {
+          res: gl.getUniformLocation(prog, 'u_res'),
+          alpha: gl.getUniformLocation(prog, 'u_alpha'),
+          c0: gl.getUniformLocation(prog, 'u_c0'),
+          c1: gl.getUniformLocation(prog, 'u_c1'),
+          c2: gl.getUniformLocation(prog, 'u_c2'),
+          c3: gl.getUniformLocation(prog, 'u_c3'),
+          edgeW: gl.getUniformLocation(prog, 'u_edgeW'),
+          edgeGamma: gl.getUniformLocation(prog, 'u_edgeGamma'),
+        };
+
+        const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
+        const vboPos = gl.createBuffer(), vboUV = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, vboPos); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, vboUV); gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 0, 0);
+        gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+        // 数值状态
+        let DPR = 1, W = 0, H = 0, running = true;
+        let cx, cy, nx, ny;                 // 中线与法线
+        let off, vel;                      // 鼠标扰动
+        let mx = -1, my = -1, pmx = 0, pmy = 0;
+
+        const POS = () => new Float32Array((cfg.segments * 2) * 2);
+        const UV = () => new Float32Array((cfg.segments * 2) * 2);
+        const HEX4 = s => { const c = parseInt(s.slice(1), 16); return [((c >> 16) & 255) / 255, ((c >> 8) & 255) / 255, (c & 255) / 255, 1]; };
+
+        function resize() {
+          DPR = Math.min(devicePixelRatio || 1, 2);
+          const r = canvas.getBoundingClientRect();
+          W = canvas.width = Math.max(2, Math.floor(r.width * DPR));
+          H = canvas.height = Math.max(2, Math.floor(r.height * DPR));
+          canvas.style.width = r.width + 'px'; canvas.style.height = r.height + 'px';
+          gl.viewport(0, 0, W, H);
+          cx = new Float32Array(cfg.segments); cy = new Float32Array(cfg.segments);
+          nx = new Float32Array(cfg.segments); ny = new Float32Array(cfg.segments);
+          off = new Float32Array(cfg.segments); vel = new Float32Array(cfg.segments);
+          off.fill(0); vel.fill(0);
+        }
+        const ro = new ResizeObserver(() => resize()); ro.observe(canvas); resize();
+
+        function anchorPx() { const a = cfg.anchorNDC; return { ax: a.ax * W, ay: a.ay * H, bx: a.bx * W, by: a.by * H }; }
+        function bez(ax, ay, c1x, c1y, c2x, c2y, bx, by, t) {
+          const u = 1 - t, uu = u * u, tt = t * t;
+          return [u * uu * ax + 3.0 * uu * t * c1x + 3.0 * u * tt * c2x + tt * t * bx,
+          u * uu * ay + 3.0 * uu * t * c1y + 3.0 * u * tt * c2y + tt * t * by];
+        }
+
+        // 交互
+        canvas.addEventListener('pointermove', e => {
+          if (!cfg.hover.active) return;
+          const r = canvas.getBoundingClientRect();
+          mx = (e.clientX - r.left) * DPR; my = (e.clientY - r.top) * DPR;
+        }, { passive: true });
+        canvas.addEventListener('pointerleave', () => { mx = -1; my = -1; });
+
+        requestAnimationFrame(draw);
+        function draw(now) {
+          if (!running) return;
+          requestAnimationFrame(draw);
+          const t = now * 0.001;
+
+          gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+          gl.useProgram(prog);
+          gl.uniform2f(U.res, W, H);
+          gl.uniform1f(U.edgeW, cfg.edge.width);
+          gl.uniform1f(U.edgeGamma, cfg.edge.gamma);
+
+          // —— 公共中心线（带基础波形）——
+          const A = anchorPx();
+          const c1x = A.ax + (A.bx - A.ax) * cfg.curve * 0.6;
+          const c1y = A.ay + H * (0.10 + 0.03 * Math.sin(t * 0.7));
+          const c2x = A.bx - (A.bx - A.ax) * cfg.curve;
+          const c2y = A.by - H * (0.08 + 0.03 * Math.cos(t * 0.9));
+
+          for (let i = 0; i < cfg.segments; i++) {
+            const s = i / (cfg.segments - 1);
+            const P = bez(A.ax, A.ay, c1x, c1y, c2x, c2y, A.bx, A.by, s);
+            const shape = 1.0 - Math.pow(1.0 - s, 1.6); // 末端更活跃
+            const base = Math.sin(s * 7.0 + t * cfg.flowSpeed * 3.2) * cfg.waveAmp * shape;
+            cx[i] = P[0]; cy[i] = P[1] + base;
+          }
+          for (let i = 0; i < cfg.segments; i++) {
+            const i0 = Math.max(0, i - 1), i1 = Math.min(cfg.segments - 1, i + 1);
+            const tx = cx[i1] - cx[i0], ty = cy[i1] - cy[i0], inv = 1 / Math.max(1e-6, Math.hypot(tx, ty));
+            nx[i] = -ty * inv; ny[i] = tx * inv;
+          }
+
+          // —— 鼠标扰动：半隐式弹簧 + 拉普拉斯耦合 ——
+          if (cfg.hover.active) {
+            const rad = cfg.hover.radiusPx * DPR;
+            const mvx = (mx >= 0 ? mx - pmx : 0), mvy = (my >= 0 ? my - pmy : 0); pmx = mx; pmy = my;
+            for (let i = 1; i < cfg.segments - 1; i++) {
+              if (mx >= 0) {
+                const dx = mx - cx[i], dy = my - cy[i], d = Math.hypot(dx, dy);
+                if (d < rad) {
+                  const w = 1 - d / rad;
+                  const proj = (mvx * nx[i] + mvy * ny[i]);
+                  vel[i] += proj * cfg.hover.forceGain * w;
+                }
+              }
+            }
+            const dt = 1 / 60;
+            for (let i = 1; i < cfg.segments - 1; i++) {
+              const a = -cfg.hover.stiffness * off[i] - cfg.hover.damping * vel[i];
+              vel[i] += a * dt;
+            }
+            for (let i = 1; i < cfg.segments - 1; i++) {
+              const lap = (off[i - 1] + off[i + 1] - 2 * off[i]) * cfg.hover.couple;
+              vel[i] += lap * dt;
+            }
+            for (let i = 1; i < cfg.segments - 1; i++) off[i] += vel[i] * dt;
+            off[0] = off[cfg.segments - 1] = 0; vel[0] = vel[cfg.segments - 1] = 0;
+          } else {
+            for (let i = 0; i < cfg.segments; i++) { off[i] *= 0.98; vel[i] *= 0.95; }
+          }
+
+          // —— 绘制每一层：在公共中心线基础上加“该层的独立波动” + 分层位移 ——
+          const LCOUNT = cfg.layers.length, center = (LCOUNT - 1) / 2;
+          for (let li = 0; li < LCOUNT; li++) {
+            const L = cfg.layers[li], M = L.motion || {};
+            const POSBUF = POS(), UVBUF = UV();
+            const col = L.colors.map(HEX4);
+            gl.uniform4f(U.c0, ...col[0]); gl.uniform4f(U.c1, ...col[1]); gl.uniform4f(U.c2, ...col[2]); gl.uniform4f(U.c3, ...col[3]);
+            gl.uniform1f(U.alpha, L.alpha);
+
+            // 层间固定分离
+            const layerShift = (li - center) * (cfg.layerOffsetPx * DPR);
+
+            // 该层独立波动系数
+            const ampMul = (M.ampMul ?? 1.0);
+            const speed = (M.speedMul ?? 1.0) * cfg.flowSpeed;
+            const freqMul = (M.freqMul ?? 1.0);
+            const phase = (M.phase ?? 0.0);
+            const shpPow = (M.shapePow ?? 1.4); // 越大→越偏末端
+
+            let k = 0, m = 0;
+            for (let i = 0; i < cfg.segments; i++) {
+              const s = i / (cfg.segments - 1);
+              const width = (L.width * DPR) * (cfg.widthProfile.base + cfg.widthProfile.gain * Math.sin(Math.PI * s));
+
+              // 该层专属位移（沿法线），与公共中心线相加
+              const shape = 1.0 - Math.pow(1.0 - s, shpPow);
+              const extra = Math.sin(s * (7.0 * freqMul) + t * speed * 3.2 + phase) * (cfg.waveAmp * ampMul) * shape;
+
+              const x = cx[i] + nx[i] * (off[i] + layerShift + extra);
+              const y = cy[i] + ny[i] * (off[i] + layerShift + extra);
+
+              POSBUF[k++] = x + nx[i] * width; POSBUF[k++] = y + ny[i] * width; UVBUF[m++] = s; UVBUF[m++] = +1.0;
+              POSBUF[k++] = x - nx[i] * width; POSBUF[k++] = y - ny[i] * width; UVBUF[m++] = s; UVBUF[m++] = -1.0;
+            }
+            gl.bindBuffer(gl.ARRAY_BUFFER, vboPos); gl.bufferData(gl.ARRAY_BUFFER, POSBUF, gl.DYNAMIC_DRAW);
+            gl.bindBuffer(gl.ARRAY_BUFFER, vboUV); gl.bufferData(gl.ARRAY_BUFFER, UVBUF, gl.DYNAMIC_DRAW);
+            gl.bindVertexArray(vao);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, cfg.segments * 2);
+          }
+        }
+
+        const ctrl = {
+          cfg,
+          refresh() { // 改了 cfg 中的几何/宽高/分段数后调用
+            resize();
+          },
+          start() { if (!running) { running = true; requestAnimationFrame(draw); } },
+          stop() { running = false; }
+        };
+        return { ctrl };
+      }
+
+
+      /* ---- 初始化：将丝带绑定到第2页的 canvas 上 ---- */
+      const Ribbon = createRibbonGL(
+        document.getElementById('ribbon'),
+        {
+          // 这里可以覆盖默认参数；保持为空即使用上面 Object.assign 中的默认（含你给的值）
+          // 例如：layerOffsetPx: 24, hover: { ... }
+        }
+      );
+      // 公开到全局，方便控制台调参
+      window.Ribbon = Ribbon;
+    </script>
+
+    <script>
+      (() => {
+        const wrap = document.getElementById('wBubbles');
+        if (!wrap) return;
+
+        // —— W 形锚点（百分比），可按需微调 —— //
+        const ANCHORS = [
+          { x: .10, y: .22 }, { x: .30, y: .76 }, { x: .50, y: .26 }, { x: .70, y: .76 }, { x: .90, y: .22 }
+        ];
+        const HOVER_SCALE = 1.22;         // 悬停放大倍率
+        const RANGE_PCT = 0.16;         // 运动半径相对容器短边（0.12~0.20 区间都好看）
+        const SIZE_PCT = 1;         // 气泡基准尺寸相对容器短边
+        // —— 弹性缓动参数（非线性）：小弹簧（近临界阻尼） —— //
+        const K = 40;   // 刚度（越大越“跟手”）
+        const C = 8;    // 阻尼（越大越稳，过大则迟钝）
+
+        const bubbles = Array.from(wrap.querySelectorAll('.bubble'));
+        const rect = () => wrap.getBoundingClientRect();
+
+        // 创建标题节点
+        // 创建图片 + 遮罩 + 标题
+        bubbles.forEach((el, i) => {
+          const url = el.dataset.img;
+          if (url) {
+            const pic = document.createElement('span');
+            pic.className = 'pic';
+            const img = new Image();
+            img.src = url; img.alt = el.dataset.title || `Bubble ${i + 1}`;
+            img.loading = 'lazy'; img.decoding = 'async';
+            pic.appendChild(img);
+            el.prepend(pic); // 图片在底层
+          }
+
+          // ← 新增：遮罩层（图片之上、标题之下）
+          const shade = document.createElement('span');
+          shade.className = 'shade';
+          el.appendChild(shade);
+
+          const t = document.createElement('span');
+          t.className = 'title';
+          t.textContent = el.dataset.title || `Bubble ${i + 1}`;
+          el.appendChild(t);
+        });
+
+
+        // 每个气泡的状态
+        const S = bubbles.map((el, i) => ({
+          el,
+          anchor: { x: 0, y: 0 },    // 绝对像素坐标（容器内）
+          pos: { x: 0, y: 0 },
+          vel: { x: 0, y: 0 },
+          target: { x: 0, y: 0 },
+          range: 100,
+          base: 120,
+          scale: 1,
+          scaleT: 1,
+          hover: false,
+          driftPhase: Math.random() * Math.PI * 2,
+          driftSpeed: 0.4 + Math.random() * 0.5,
+          driftAmp: { x: 1, y: 1 },
+          idx: i
+        }));
+
+        // 计算布局（响应式）
+        function layout(init = false) {
+          const r = rect();
+          const short = Math.min(r.width, r.height);
+          S.forEach((s, i) => {
+            const a = ANCHORS[i];
+            s.anchor.x = a.x * r.width;
+            s.anchor.y = a.y * r.height;
+            s.range = Math.max(40, Math.min(short * RANGE_PCT, 160));
+            s.base = Math.max(60, Math.min(short * SIZE_PCT, 220));
+            const ds = parseFloat(s.el.dataset.size);
+            if (!Number.isNaN(ds)) s.base = ds; // 单个气泡可用 data-size 覆盖
+            s.driftAmp.x = s.range * 0.35;
+            s.driftAmp.y = s.range * 0.25;
+            if (init) {
+              s.pos.x = s.anchor.x; s.pos.y = s.anchor.y; // 初始吸附锚点
+            }
+          });
+        }
+        layout(true);
+        window.addEventListener('resize', () => layout(false));
+
+        // 指针交互：容器坐标
+        const pointer = { x: 0, y: 0, inside: false };
+        wrap.addEventListener('mousemove', e => {
+          const r = rect();
+          pointer.x = e.clientX - r.left;
+          pointer.y = e.clientY - r.top;
+          pointer.inside = true;
+        });
+        wrap.addEventListener('mouseleave', () => { pointer.inside = false });
+
+        // 悬停状态（放大并显示标题）
+        S.forEach(s => {
+          s.el.addEventListener('mouseenter', () => {
+            s.hover = true; s.scaleT = HOVER_SCALE; s.el.dataset.visible = "1"; s.el.style.zIndex = 8;
+          });
+          s.el.addEventListener('mouseleave', () => {
+            s.hover = false; s.scaleT = 1; s.el.dataset.visible = "0"; s.el.style.zIndex = 6;
+          });
+        });
+
+        // 工具：限制到圆形范围
+        const clampToCircle = (ax, ay, px, py, R) => {
+          let vx = px - ax, vy = py - ay;
+          const len = Math.hypot(vx, vy) || 1;
+          if (len > R) { vx = vx / len * R; vy = vy / len * R; }
+          return { x: ax + vx, y: ay + vy };
+        };
+
+        let last = performance.now();
+        function tick(now) {
+          const dt = Math.min(0.032, (now - last) / 1000); // 限帧步长（平滑 & 稳定）
+          last = now;
+
+          const r = rect();
+          S.forEach(s => {
+            // 目标点：悬停 → 跟随指针（限制在自家范围） | 否则 → 轻微漂移
+            if (s.hover && pointer.inside) {
+              const t = clampToCircle(s.anchor.x, s.anchor.y, pointer.x, pointer.y, s.range);
+              s.target.x = t.x; s.target.y = t.y;
+            } else {
+              const tsec = now / 1000;
+              s.target.x = s.anchor.x + Math.sin(s.driftPhase + tsec * s.driftSpeed) * s.driftAmp.x;
+              s.target.y = s.anchor.y + Math.cos(s.driftPhase * 0.9 + tsec * s.driftSpeed * .8) * s.driftAmp.y;
+            }
+
+            // —— 核心：弹簧（非线性缓入缓出） —— //
+            const ax = (s.target.x - s.pos.x) * K - s.vel.x * C;
+            const ay = (s.target.y - s.pos.y) * K - s.vel.y * C;
+            s.vel.x += ax * dt; s.vel.y += ay * dt;
+            s.pos.x += s.vel.x * dt; s.pos.y += s.vel.y * dt;
+
+            // 尺寸也用指数平滑，避免线性突变
+            const kSize = 1 - Math.pow(0.0001, dt); // 时间无关的平滑系数
+            s.scale += (s.scaleT - s.scale) * kSize;
+
+            // 应用到 DOM
+            const x = s.pos.x - s.base / 2;
+            const y = s.pos.y - s.base / 2;
+            s.el.style.setProperty('--size', s.base + 'px');
+            s.el.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${s.scale})`;
+          });
+
+          requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+      })();
+    </script>
+
+    <script>
+      (function () {
+        const I18N = {
+          en: {
+            "nav.project": "Project",
+            "nav.about": "About",
+
+            "bubbles.cnn": "CNN based Embedded Perception",
+            "bubbles.ink": "Ink Sketches / Design",
+            "bubbles.webgl": "WebGL Design",
+            "bubbles.da": "Data Analysis",
+            "bubbles.ixd": "Interactive Design",
+
+            "card1.overline": "This is me.",
+            "card1.title": "Amber",
+            "card1.desc": "An elegant and decent cat.",
+
+            "card2.overline": "This is my faithful servant.",
+            "card2.title": "Ding",
+            "card2.desc": "He is reliable, although a bit lazy at times.",
+
+            "card3.overline": "Ding",
+            "card3.title": "Yu",
+            "card3.desc": "Designer by trade, tinkerer by habit. I sketch interfaces, solder circuits, write code, and train models — bridging the gap between tactile hardware and intelligent software. Whether I'm debugging a sensor, refining a user flow, or coaxing a model to understand nuance, I care about craft, clarity, and making complex systems feel effortless."
+          },
+          zh: {
+            "nav.project": "项目",
+            "nav.about": "关于",
+
+            "bubbles.cnn": "基于 CNN 的嵌入式感知",
+            "bubbles.ink": "墨稿 / 设计",
+            "bubbles.webgl": "WebGL 设计",
+            "bubbles.da": "数据分析",
+            "bubbles.ixd": "交互设计",
+
+            "card1.overline": "这就是我。",
+            "card1.title": "Amber",
+            "card1.desc": "一只优雅而得体的猫。",
+
+            "card2.overline": "这是我忠诚的仆人。",
+            "card2.title": "Ding",
+            "card2.desc": "他很可靠，偶尔有点小懒。",
+
+            "card3.overline": "Ding",
+            "card3.title": "Yu",
+            "card3.desc": "白天做设计，平时爱折腾。我画界面、焊电路、写代码、训练模型——在可触摸的硬件与智能软件之间搭桥。无论是调传感器、打磨流程，还是让模型理解细微语义，我在意的是工艺、清晰度，以及让复杂系统变得毫不费力。"
+          }
+        };
+
+        function applyI18n(lang) {
+          const dict = I18N[lang] || I18N.en;
+          document.documentElement.lang = (lang === 'zh' ? 'zh-CN' : 'en');
+
+          // 常规文本
+          document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            const val = dict[key];
+            if (typeof val === 'string') el.textContent = val;
+          });
+
+          // 气泡标题（更新 data-title + 现有 .title 文本）
+          document.querySelectorAll('.w-bubbles .bubble').forEach(el => {
+            const key = el.getAttribute('data-i18n-title');
+            if (!key) return;
+            const t = dict[key] || el.dataset.title || '';
+            el.dataset.title = t;
+            const title = el.querySelector('.title');
+            if (title) title.textContent = t;
+          });
+
+          // 切换按钮态
+          const sw = document.getElementById('langSwitch');
+          if (sw) sw.classList.toggle('is-zh', lang === 'zh');
+
+          try { localStorage.setItem('lang', lang); } catch (_) { }
+        }
+
+        // 绑定按钮
+        const sw = document.getElementById('langSwitch');
+        if (sw) sw.addEventListener('click', () => {
+          // 从 html 的 lang 直接读当前语言最稳
+          const cur = document.documentElement.lang.startsWith('zh') ? 'zh' : 'en';
+          applyI18n(cur === 'zh' ? 'en' : 'zh');
+        });
+
+        // 初始语言：localStorage > 浏览器 > HTML
+        let lang = 'en';
+        try {
+          lang = localStorage.getItem('lang') || ((navigator.language || '').toLowerCase().includes('zh') ? 'zh' : 'en');
+        } catch (_) { }
+        applyI18n(lang);
+      })();
+    </script>
+
+
+
+</body>
+
+</html>
